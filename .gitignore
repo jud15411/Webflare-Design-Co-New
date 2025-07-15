@@ -1,0 +1,28 @@
+# Dependencies
+# This folder is huge and can be recreated by running "npm install"
+node_modules/
+
+# Build artifacts
+# This folder is generated when you build the React apps for production
+/client/build
+/admin/build
+
+# Secrets
+# This file contains your secret keys and database URI.
+# It should NEVER be committed to GitHub.
+.env
+
+# Logs
+# Log files are specific to your local machine and don't belong in the repo
+logs
+*.log
+npm-debug.log*
+
+# OS-generated files
+# These are system files that can clutter the repository
+.DS_Store
+Thumbs.db
+
+# Editor-specific files
+# User-specific settings for code editors like VS Code
+.vscode/
