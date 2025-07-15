@@ -7,7 +7,10 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+
+// --- Read Environment Variables ---
 const JWT_SECRET = process.env.JWT_SECRET;
+const MONGO_URI = process.env.MONGO_URI; // <-- THIS WAS THE MISSING LINE
 
 // --- Initialize App & Models ---
 const app = express();
@@ -34,7 +37,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage }).single('projectImage');
 
 // --- DB Connection ---
-const MONGO_URI = "mongodb+srv://temp_admin:Webflare123@cluster1.xe94ros.mongodb.net/webflare_db?retryWrites=true&w=majority&appName=Cluster1";
+// This line will now work correctly
 mongoose.connect(MONGO_URI).then(() => console.log("MongoDB Connected!")).catch(err => console.error(err));
 
 // --- Auth Middleware ---
@@ -43,7 +46,7 @@ const authMiddleware = (req, res, next) => {
     if (!token) return res.status(401).json({ msg: 'No token, authorization denied' });
     try {
         const decoded = jwt.verify(token, JWT_SECRET );
-        req.userId = decoded.id; // Correctly sets req.userId
+        req.userId = decoded.id;
         next();
     } catch (err) {
         res.status(401).json({ msg: 'Token is not valid' });
@@ -65,7 +68,6 @@ app.post('/api/auth/register', authMiddleware, async (req, res) => {
     res.status(201).send('User registered successfully');
   } catch (err) { res.status(500).send('Server error'); }
 });
-
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -80,20 +82,15 @@ app.post('/api/auth/login', async (req, res) => {
         });
     } catch (err) { res.status(500).send('Server error'); }
 });
-
-// THIS IS THE CORRECTED ROUTE
 app.get('/api/auth/user', authMiddleware, async (req, res) => {
     const user = await User.findById(req.userId).select('-password');
     res.json(user);
 });
-
-// THIS IS THE CORRECTED ROUTE
 app.put('/api/auth/user', authMiddleware, async (req, res) => {
     const { name, email } = req.body;
     const updatedUser = await User.findByIdAndUpdate(req.userId, { name, email }, { new: true }).select('-password');
     res.json(updatedUser);
 });
-
 
 // DASHBOARD
 app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
