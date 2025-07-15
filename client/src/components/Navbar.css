@@ -1,0 +1,85 @@
+.navbar {
+  background: rgba(10, 10, 10, 0.5); /* Semi-transparent dark background */
+  backdrop-filter: blur(10px); /* Frosted glass effect */
+  height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.1rem;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  border-bottom: 1px solid #222;
+}
+
+.navbar-container {
+  display: flex;
+  justify-content: space-between;
+  height: 80px;
+  width: 100%;
+  max-width: 1200px;
+  padding: 0 24px;
+}
+
+.navbar-logo {
+  background-color: #f0f0f0; /* A light, neutral gray */
+  height: 60px;
+  width: 60px;
+  border-radius: 50%; /* This makes it a circle */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 5px;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.navbar-logo:hover {
+  transform: scale(1.1);
+}
+
+/* Add this new style for the image inside the logo container */
+.navbar-logo img {
+  height: 50px; /* Adjust size as needed */
+  width: auto;
+}
+
+.nav-menu {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  text-align: center;
+}
+
+.nav-item {
+  height: 80px;
+}
+
+.nav-links {
+  color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  padding: 0 1rem;
+  height: 100%;
+  transition: all 0.2s ease-out;
+}
+
+.nav-links:hover {
+  color: #00BFFF; /* Deep Sky Blue Accent */
+}
+
+.nav-button {
+  background-color: transparent;
+  color: #00BFFF;
+  padding: 8px 20px;
+  border: 1px solid #00BFFF;
+  border-radius: 5px;
+  margin-left: 1rem;
+  transition: all 0.3s ease-out;
+}
+
+.nav-button:hover {
+  background-color: #00BFFF;
+  color: #000;
+}

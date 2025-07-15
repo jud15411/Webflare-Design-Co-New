@@ -1,0 +1,30 @@
+.services-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 30px;
+  margin-top: 60px;
+}
+
+.service-page-card {
+  background: #111;
+  padding: 40px;
+  border-radius: 10px;
+  border: 1px solid #222;
+  transition: all 0.3s ease;
+}
+
+.service-page-card:hover {
+  transform: translateY(-10px);
+  border-color: #00BFFF;
+}
+
+.service-page-card h3 {
+  font-size: 1.6rem;
+  margin-bottom: 15px;
+  color: #00BFFF;
+}
+
+.service-page-card p {
+  color: #c0c0c0;
+  line-height: 1.7;
+}

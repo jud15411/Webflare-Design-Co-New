@@ -1,0 +1,134 @@
+/* Container for page title and add button */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.page-title {
+  color: #2c3e50;
+  margin: 0;
+}
+
+.add-button {
+  background-color: #1abc9c;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.add-button:hover {
+  background-color: #16a085;
+}
+
+/* Data Table Styles */
+.data-table-container {
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  text-align: left;
+  padding: 12px 15px;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+thead th {
+  background-color: #f9fafb;
+  color: #7f8c8d;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Modal Styles */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 500px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-title {
+  margin: 0;
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* Form Group Styles (for modals) */
+.form-group {
+  margin-bottom: 20px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+/* Add these styles to the bottom of your Shared.css file */
+
+.actions-cell button {
+  margin-right: 5px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.edit-button {
+  background-color: #f1c40f;
+  color: #fff;
+}
+
+.delete-button {
+  background-color: #e74c3c;
+  color: #fff;
+}
