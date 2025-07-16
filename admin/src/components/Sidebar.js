@@ -21,31 +21,29 @@ function Sidebar({ user, currentPage, navigateTo }) {
           <li className={currentPage === 'projects' ? 'active' : ''}>
             <button onClick={() => navigateTo('projects')}>Projects</button>
           </li>
-          
-          {/* Conditionally render based on user role */}
-          {user && user.role === 'CEO' && (
+          {user && ['CEO', 'CTO'].includes(user.role) && (
             <li className={currentPage === 'clients' ? 'active' : ''}>
               <button onClick={() => navigateTo('clients')}>Clients</button>
             </li>
           )}
-
           <li className={currentPage === 'tasks' ? 'active' : ''}>
             <button onClick={() => navigateTo('tasks')}>Tasks</button>
           </li>
-          <li className={currentPage === 'invoices' ? 'active' : ''}>
-            <button onClick={() => navigateTo('invoices')}>Invoices</button>
-          </li>
-          <li className={currentPage === 'contracts' ? 'active' : ''}>
-            <button onClick={() => navigateTo('contracts')}>Contracts</button>
-          </li>
-          
-          {/* Conditionally render based on user role */}
-          {user && user.role === 'CEO' && (
+          {user && ['CEO', 'CTO'].includes(user.role) && (
+            <li className={currentPage === 'invoices' ? 'active' : ''}>
+              <button onClick={() => navigateTo('invoices')}>Invoices</button>
+            </li>
+          )}
+          {user && ['CEO', 'CTO'].includes(user.role) && (
+            <li className={currentPage === 'contracts' ? 'active' : ''}>
+              <button onClick={() => navigateTo('contracts')}>Contracts</button>
+            </li>
+          )}
+          {user && ['CEO', 'CTO'].includes(user.role) && (
             <li className={currentPage === 'addUser' ? 'active' : ''}>
               <button onClick={() => navigateTo('addUser')}>Users</button>
             </li>
           )}
-
           <li className={currentPage === 'settings' ? 'active' : ''}>
             <button onClick={() => navigateTo('settings')}>Settings</button>
           </li>

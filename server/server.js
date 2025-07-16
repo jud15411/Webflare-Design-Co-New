@@ -52,7 +52,7 @@ const authMiddleware = (req, res, next) => {
         res.status(401).json({ msg: 'Token is not valid' });
     }
 };
-const ceoOnlyMiddleware = async (req, res, next) => {
+const adminOnlyMiddleware = async (req, res, next) => {
     try {
         const user = await User.findById(req.userId);
         if (user.role !== 'CEO') {
@@ -67,7 +67,7 @@ const ceoOnlyMiddleware = async (req, res, next) => {
 // --- API ROUTES ---
 
 // AUTH
-app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
+app.post('/api/auth/register', authMiddleware, adminOnlyMiddleware, async (req, res) => {
   try {
     const { name, email, password } = req.body;
     let user = await User.findOne({ email });
@@ -217,10 +217,10 @@ app.put('/api/projects/:id/toggle-feature', authMiddleware, async (req, res) => 
 });
 
 // CLIENTS
-app.get('/api/clients', authMiddleware, ceoOnlyMiddleware, async (req, res) => res.json(await Client.find()));
-app.post('/api/clients', authMiddleware, ceoOnlyMiddleware, async (req, res) => res.status(201).json(await new Client(req.body).save()));
-app.put('/api/clients/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => res.json(await Client.findByIdAndUpdate(req.params.id, req.body, { new: true })));
-app.delete('/api/clients/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => res.json(await Client.findByIdAndDelete(req.params.id)));
+app.get('/api/clients', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Client.find()));
+app.post('/api/clients', authMiddleware, adminOnlyMiddleware, async (req, res) => res.status(201).json(await new Client(req.body).save()));
+app.put('/api/clients/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Client.findByIdAndUpdate(req.params.id, req.body, { new: true })));
+app.delete('/api/clients/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Client.findByIdAndDelete(req.params.id)));
 
 // TASKS
 app.get('/api/tasks', authMiddleware, async (req, res) => res.json(await Task.find().populate({ path: 'projectId', select: 'title' })));
@@ -235,16 +235,16 @@ app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
 });
 
 // INVOICES
-app.get('/api/invoices', authMiddleware, async (req, res) => res.json(await Invoice.find().populate({ path: 'projectId', populate: { path: 'clientId' } })));
-app.post('/api/invoices', authMiddleware, async (req, res) => res.status(201).json(await new Invoice(req.body).save()));
-app.put('/api/invoices/:id', authMiddleware, async (req, res) => res.json(await Invoice.findByIdAndUpdate(req.params.id, req.body, { new: true })));
-app.delete('/api/invoices/:id', authMiddleware, async (req, res) => res.json(await Invoice.findByIdAndDelete(req.params.id)));
+app.get('/api/invoices', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Invoice.find().populate({ path: 'projectId', populate: { path: 'clientId' } })));
+app.post('/api/invoices', authMiddleware, adminOnlyMiddleware, async (req, res) => res.status(201).json(await new Invoice(req.body).save()));
+app.put('/api/invoices/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Invoice.findByIdAndUpdate(req.params.id, req.body, { new: true })));
+app.delete('/api/invoices/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Invoice.findByIdAndDelete(req.params.id)));
 
 // CONTRACTS
-app.get('/api/contracts', authMiddleware, async (req, res) => res.json(await Contract.find().populate({ path: 'projectId', populate: { path: 'clientId' } })));
-app.post('/api/contracts', authMiddleware, async (req, res) => res.status(201).json(await new Contract(req.body).save()));
-app.put('/api/contracts/:id', authMiddleware, async (req, res) => res.json(await Contract.findByIdAndUpdate(req.params.id, req.body, { new: true })));
-app.delete('/api/contracts/:id', authMiddleware, async (req, res) => res.json(await Contract.findByIdAndDelete(req.params.id)));
+app.get('/api/contracts', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.find().populate({ path: 'projectId', populate: { path: 'clientId' } })));
+app.post('/api/contracts', authMiddleware, adminOnlyMiddleware, async (req, res) => res.status(201).json(await new Contract(req.body).save()));
+app.put('/api/contracts/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.findByIdAndUpdate(req.params.id, req.body, { new: true })));
+app.delete('/api/contracts/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.findByIdAndDelete(req.params.id)));
 
 // --- Start Server ---
 app.listen(PORT, () => {
