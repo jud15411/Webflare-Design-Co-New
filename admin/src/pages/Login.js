@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './Login.css';
 
-function Login() {
+function Login({ onLogin }) { // Accept the onLogin prop
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,19 +16,12 @@ function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.msg || 'Login failed');
-      }
+      if (!response.ok) throw new Error(data.msg || 'Login failed');
       
-      // IMPORTANT: Login successful, save the token!
       localStorage.setItem('token', data.token);
       
-      // Reload the page to simulate being logged in (a router would handle this better)
-      window.location.reload();
-
+      onLogin(); // Call the onLogin function passed from App.js
     } catch (err) {
       setError(err.message);
     }
@@ -37,27 +30,18 @@ function Login() {
   return (
     <div className="login-container">
       <div className="login-box">
-        <h2>Webflare Admin Login</h2>
+        {/* Add your logo here */}
+        <img src="/images/Webflare_Design_Co.webp" alt="Webflare Design Co. Logo" className="login-logo" />
+
+        <h2>Developer Gateway</h2>
         <form onSubmit={handleLogin}>
           <div className="input-group">
             <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+            <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div className="input-group">
             <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
           {error && <p className="error-message">{error}</p>}
           <button type="submit" className="login-button">Log In</button>
