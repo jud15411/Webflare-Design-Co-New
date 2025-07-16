@@ -4,7 +4,7 @@ import './Shared.css';
 function Settings() {
   const [user, setUser] = useState(null);
   const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading,] = useState(true);
   const [profileMessage, setProfileMessage] = useState('');
   const [passwordMessage, setPasswordMessage] = useState('');
   const [passwordError, setPasswordError] = useState('');
