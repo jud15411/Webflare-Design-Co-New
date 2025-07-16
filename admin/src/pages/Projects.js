@@ -144,7 +144,7 @@ function Projects() {
       <div className="data-table-container">
         <table>
           <thead>
-            <tr><th>Title</th><th>Client</th><th>Status</th><th>Featured</th><th>Actions</th></tr>
+            <tr><th>Title</th><th>Client</th><th>Status</th><th>Featured</th><th>Comments</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {projects && projects.length > 0 ? (
@@ -154,6 +154,7 @@ function Projects() {
                     <td>{project.clientId?.name || 'N/A'}</td>
                     <td>{project.status}</td>
                     <td>{project.isFeatured ? 'Yes' : 'No'}</td>
+                    <td>{project.commentCount}</td>
                     <td className="actions-cell">
                       <button className="edit-button" onClick={() => openEditModal(project)}>Edit</button>
                       <button className="delete-button" onClick={() => handleDeleteProject(project._id)}>Delete</button>

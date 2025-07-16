@@ -192,7 +192,55 @@ app.get('/api/featured-projects', async (req, res) => {
 });
 
 // PROJECTS
-app.get('/api/projects', async (req, res) => res.json(await Project.find().populate('clientId')));
+app.get('/api/projects', authMiddleware, async (req, res) => {
+    try {
+        const projects = await Project.aggregate([
+            // Step 1: Look up comments that belong to each project
+            {
+                $lookup: {
+                    from: 'comments', // The comments collection
+                    localField: '_id', // The ID from the projects collection
+                    foreignField: 'project', // The field in the comments collection
+                    as: 'comments' // The new array field name
+                }
+            },
+            // Step 2: Look up the client for each project
+            {
+                $lookup: {
+                    from: 'clients',
+                    localField: 'clientId',
+                    foreignField: '_id',
+                    as: 'clientDetails'
+                }
+            },
+            // Step 3: Deconstruct the clientDetails array to be a single object
+            {
+                $unwind: {
+                    path: '$clientDetails',
+                    preserveNullAndEmptyArrays: true // Keep projects even if they have no client
+                }
+            },
+            // Step 4: Add a new field 'commentCount' that is the size of the comments array
+            {
+                $addFields: {
+                    commentCount: { $size: '$comments' },
+                    clientId: '$clientDetails' // Overwrite clientId with the populated object
+                }
+            },
+            // Step 5: Remove the large comments array from the final result
+            {
+                $project: {
+                    comments: 0,
+                    clientDetails: 0
+                }
+            }
+        ]);
+        res.json(projects);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
 app.post('/api/projects', authMiddleware, (req, res) => {
     upload(req, res, async (err) => {
         if(err) return res.status(500).json({ msg: err });
