@@ -52,12 +52,21 @@ const authMiddleware = (req, res, next) => {
         res.status(401).json({ msg: 'Token is not valid' });
     }
 };
-const adminOnlyMiddleware = async (req, res, next) => {
+const adminOnlyMiddleware = (req, res, next) => {
+    // This middleware assumes authMiddleware has already run and attached req.userId
+    // We will now re-decode the token here to securely get the role.
+    const token = req.header('x-auth-token');
     try {
-        const user = await User.findById(req.userId);
-        if (user.role !== 'CEO') {
-            return res.status(403).json({ msg: 'Access denied. CEO privileges required.' });
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        // The role is inside the 'user' object in the token
+        // This was the source of the error
+        const userRole = decoded.role; 
+
+        if (!['CEO', 'CTO'].includes(userRole)) {
+            return res.status(403).json({ msg: 'Access denied. Admin privileges required.' });
         }
+        
         next();
     } catch (err) {
         res.status(500).send('Server error');
