@@ -5,42 +5,28 @@ function TermsOfService() {
   return (
     <div className="legal-container">
       <h2>Terms of Service</h2>
-      <p className="last-updated">Last Updated: July 14, 2025</p>
+      <p className="last-updated">Last Updated: July 16, 2025</p>
 
-      <h3>1. Acceptance of Terms</h3>
-      <p>
-        By accessing and using this website (the "Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this Service.
-      </p>
+      <h3>1. Agreement to Terms</h3>
+      <p>By using our website, you agree to these Terms of Service. If you do not agree, do not use the site.</p>
       
-      <h3>2. Use of the Website</h3>
-      <p>
-        This website and its components are offered for informational purposes only; this site shall not be responsible or liable for the accuracy, usefulness or availability of any information transmitted or made available via the site, and shall not be responsible or liable for any error or omissions in that information.
-      </p>
+      <h3>2. Intellectual Property Rights</h3>
+      <p>Unless otherwise indicated, the website is our proprietary property. All source code, designs, text, photographs, and graphics on the site (collectively, the "Content") and the trademarks and logos contained therein are owned or controlled by us and are protected by copyright and trademark laws.</p>
+      
+      <h3>3. Prohibited Activities</h3>
+      <p>You may not access or use the site for any purpose other than that for which we make the site available. You may not use this site to engage in any advertising or marketing without our express written consent.</p>
 
-      <h3>3. Intellectual Property</h3>
-      <p>
-        The Service and its original content, features, and functionality are and will remain the exclusive property of Webflare Design Co. and its licensors. Our trademarks and trade dress may not be used in connection with any product or service without the prior written consent of Webflare Design Co.
-      </p>
+      <h3>4. Disclaimers</h3>
+      <p>THE SITE IS PROVIDED ON AN AS-IS AND AS-AVAILABLE BASIS. YOU AGREE THAT YOUR USE OF THE SITE AND OUR SERVICES WILL BE AT YOUR SOLE RISK. TO THE FULLEST EXTENT PERMITTED BY LAW, WE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, IN CONNECTION WITH THE SITE.</p>
+      
+      <h3>5. Limitation of Liability</h3>
+      <p>IN NO EVENT WILL WE OR OUR DIRECTORS OR EMPLOYEES BE LIABLE TO YOU OR ANY THIRD PARTY FOR ANY DIRECT, INDIRECT, CONSEQUENTIAL, EXEMPLARY, INCIDENTAL, SPECIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF THE SITE.</p>
 
-      <h3>4. Limitation of Liability</h3>
-      <p>
-        In no event shall Webflare Design Co., nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.
-      </p>
-
-      <h3>5. Governing Law</h3>
-      <p>
-        These Terms shall be governed and construed in accordance with the laws of the State of New York, United States, without regard to its conflict of law provisions.
-      </p>
-
-      <h3>6. Changes</h3>
-      <p>
-        We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will try to provide at least 30 days' notice prior to any new terms taking effect.
-      </p>
-
-      <h3>Contact Us</h3>
-      <p>
-        If you have any questions about these Terms, please contact us at contact@webflaredesignco.com.
-      </p>
+      <h3>6. Governing Law</h3>
+      <p>These Terms of Service and your use of the Site are governed by and construed in accordance with the laws of the State of New York applicable to agreements made and to be entirely performed within the State of New York, without regard to its conflict of law principles.</p>
+      
+      <h3>7. Contact Us</h3>
+      <p>In order to resolve a complaint regarding the Site or to receive further information regarding use of the Site, please contact us at: judsonwells100@gmail.com</p>
     </div>
   );
 }

@@ -11,6 +11,9 @@ function Footer() {
           {/* Use Link component for client-side routing */}
           <Link to="/privacy-policy">Privacy Policy</Link>
           <Link to="/terms-of-service">Terms of Service</Link>
+          <Link to="/disclaimer">Disclaimer</Link>
+          <Link to="/cookie-policy">Cookie Policy</Link>
+          <Link to="/copyright">Copyright</Link>
         </div>
       </div>
     </footer>
