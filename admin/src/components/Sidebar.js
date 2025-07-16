@@ -44,6 +44,9 @@ function Sidebar({ user, currentPage, navigateTo }) {
               <button onClick={() => navigateTo('addUser')}>Users</button>
             </li>
           )}
+          <li className={currentPage === 'services' ? 'active' : ''}>
+            <button onClick={() => navigateTo('services')}>Services</button>
+          </li>
           <li className={currentPage === 'settings' ? 'active' : ''}>
             <button onClick={() => navigateTo('settings')}>Settings</button>
           </li>

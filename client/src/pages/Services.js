@@ -1,7 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './Services.css';
 
 function Services() {
+  const [services, setServices] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchServices = useCallback(async () => {
+    try {
+      // This is a public route, so no token is needed
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/services`);
+      const data = await response.json();
+      setServices(data);
+    } catch (err) {
+      console.error("Failed to fetch services:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchServices();
+  }, [fetchServices]);
+
+  if (isLoading) {
+    return <div className="page-container">Loading...</div>;
+  }
+
   return (
     <div className="services-page-container page-container">
       <div className="section-title">
@@ -9,30 +33,12 @@ function Services() {
         <div className="title-underline"></div>
       </div>
       <div className="services-page-grid">
-        <div className="service-page-card">
-          <h3>Custom Web Development</h3>
-          <p>From sleek landing pages to complex web applications, we build solutions from scratch tailored to your exact needs. We focus on clean code, scalability, and performance.</p>
-        </div>
-        <div className="service-page-card">
-          <h3>UI/UX Design</h3>
-          <p>Our design process is human-centered. We create intuitive, engaging, and aesthetically pleasing interfaces that your users will love to interact with.</p>
-        </div>
-        <div className="service-page-card">
-          <h3>E-Commerce Solutions</h3>
-          <p>We build robust and secure online stores. From product catalogs to payment gateways, we provide end-to-end e-commerce development.</p>
-        </div>
-        <div className="service-page-card">
-          <h3>SEO & Digital Marketing</h3>
-          <p>A great website needs to be seen. We implement foundational SEO best practices and strategies to improve your search engine ranking and drive organic traffic.</p>
-        </div>
-        <div className="service-page-card">
-          <h3>Website Maintenance</h3>
-          <p>Keep your digital presence secure and up-to-date. We offer maintenance packages that include updates, security monitoring, and performance checks.</p>
-        </div>
-        <div className="service-page-card">
-          <h3>API Integration</h3>
-          <p>We connect your website to third-party services, payment processors, and other external systems to extend its functionality and automate processes.</p>
-        </div>
+        {services.map(service => (
+          <div className="service-page-card" key={service._id}>
+            <h3>{service.title}</h3>
+            <p>{service.description}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -21,6 +21,7 @@ const Client = require('./models/Client');
 const Task = require('./models/Task');
 const Invoice = require('./models/Invoice');
 const Contract = require('./models/Contract');
+const Service = require('./models/Service');
 
 // --- Middleware ---
 app.use(cors());
@@ -260,6 +261,48 @@ app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
         if (!updatedTask) return res.status(404).json({ msg: 'Task not found' });
         res.json(updatedTask);
     } catch (err) { res.status(500).send('Server Error'); }
+});
+
+// == SERVICES ==
+// PUBLIC: Get all services for the client-side page
+app.get('/api/services', async (req, res) => {
+    try {
+        const services = await Service.find();
+        res.json(services);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+// PROTECTED: Create a new service (Admin only)
+app.post('/api/services', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        const newService = new Service(req.body);
+        await newService.save();
+        res.status(201).json(newService);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+// PROTECTED: Update a service (Admin only)
+app.put('/api/services/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        const service = await Service.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(service);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+// PROTECTED: Delete a service (Admin only)
+app.delete('/api/services/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        await Service.findByIdAndDelete(req.params.id);
+        res.json({ msg: 'Service deleted' });
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
 });
 
 // INVOICES

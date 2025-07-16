@@ -13,6 +13,7 @@ import Invoices from './pages/Invoices';
 import Contracts from './pages/Contracts';
 import Settings from './pages/Settings';
 import Users from './pages/Users'; // Changed from AddUser to Users
+import Services from './pages/Services';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -56,6 +57,7 @@ function App() {
       case 'contracts': return <Contracts />;
       case 'settings': return <Settings />;
       case 'addUser': return <Users />; // Changed this case to render the Users component
+      case 'services': return <Services />;
       default: return <Dashboard />;
     }
   };
