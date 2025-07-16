@@ -21,7 +21,7 @@ function Sidebar({ user, currentPage, navigateTo }) {
           <li className={currentPage === 'projects' ? 'active' : ''}>
             <button onClick={() => navigateTo('projects')}>Projects</button>
           </li>
-          {user && ['CEO', 'CTO'].includes(user.role) && (
+          {user && ['CEO'].includes(user.role) && (
             <li className={currentPage === 'clients' ? 'active' : ''}>
               <button onClick={() => navigateTo('clients')}>Clients</button>
             </li>
@@ -39,7 +39,7 @@ function Sidebar({ user, currentPage, navigateTo }) {
               <button onClick={() => navigateTo('contracts')}>Contracts</button>
             </li>
           )}
-          {user && ['CEO', 'CTO'].includes(user.role) && (
+          {user && ['CEO'].includes(user.role) && (
             <li className={currentPage === 'addUser' ? 'active' : ''}>
               <button onClick={() => navigateTo('addUser')}>Users</button>
             </li>
