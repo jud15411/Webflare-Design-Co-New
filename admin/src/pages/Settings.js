@@ -1,22 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './Shared.css';
 
 function Settings() {
   const [user, setUser] = useState(null);
   const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  const [isLoading,] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [profileMessage, setProfileMessage] = useState('');
   const [passwordMessage, setPasswordMessage] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
   const token = localStorage.getItem('token');
 
+  // 1. Wrap fetchUserData in useCallback and move it outside of useEffect
+  const fetchUserData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/user`, {
+        headers: { 'x-auth-token': token }
+      });
+      const data = await response.json();
+      setUser(data);
+    } catch (err) {
+      console.error("Failed to fetch user data", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token]);
+
+  // 2. Add fetchUserData to the dependency array
   useEffect(() => {
-    const fetchUserData = async () => {
-      // ... (no changes needed in this function)
-    };
     fetchUserData();
-  }, []);
+  }, [fetchUserData]);
 
   const handleProfileInputChange = (e) => {
     setUser({ ...user, [e.target.name]: e.target.value });
@@ -26,9 +40,15 @@ function Settings() {
     setPasswords({ ...passwords, [e.target.name]: e.target.value });
   };
 
+  // 3. Completed the fetch call to save profile changes
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
-    await fetch(`${process.env.REACT_APP_API_URL}/api/auth/user`, { /* ... */ });
+    setProfileMessage('');
+    await fetch(`${process.env.REACT_APP_API_URL}/api/auth/user`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({ name: user.name, email: user.email })
+    });
     setProfileMessage('Profile updated successfully!');
   };
 
@@ -53,7 +73,7 @@ function Settings() {
       setPasswordError(data.msg);
     } else {
       setPasswordMessage(data.msg);
-      setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' }); // Clear fields
+      setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
     }
   };
 
@@ -64,7 +84,6 @@ function Settings() {
     <div>
       <h1 className="page-title">Settings</h1>
 
-      {/* Profile Update Form */}
       <div className="data-table-container" style={{maxWidth: '600px', marginBottom: '30px'}}>
         <form onSubmit={handleProfileUpdate}>
           <h3>Update Profile</h3>
@@ -81,7 +100,6 @@ function Settings() {
         </form>
       </div>
 
-      {/* --- NEW Password Change Form --- */}
       <div className="data-table-container" style={{maxWidth: '600px'}}>
         <form onSubmit={handlePasswordUpdate}>
           <h3>Change Password</h3>
