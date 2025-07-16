@@ -1,7 +1,8 @@
 import React from 'react';
 import './Sidebar.css';
 
-function Sidebar({ currentPage, navigateTo }) {
+// Accept 'user' as a prop
+function Sidebar({ user, currentPage, navigateTo }) {
   const handleLogout = () => {
     localStorage.removeItem('token');
     window.location.reload();
@@ -20,9 +21,14 @@ function Sidebar({ currentPage, navigateTo }) {
           <li className={currentPage === 'projects' ? 'active' : ''}>
             <button onClick={() => navigateTo('projects')}>Projects</button>
           </li>
-          <li className="currentPage === 'clients' ? 'active' : ''">
-            <button onClick={() => navigateTo('clients')}>Clients</button>
-          </li>
+          
+          {/* Conditionally render based on user role */}
+          {user && user.role === 'CEO' && (
+            <li className={currentPage === 'clients' ? 'active' : ''}>
+              <button onClick={() => navigateTo('clients')}>Clients</button>
+            </li>
+          )}
+
           <li className={currentPage === 'tasks' ? 'active' : ''}>
             <button onClick={() => navigateTo('tasks')}>Tasks</button>
           </li>
@@ -32,9 +38,14 @@ function Sidebar({ currentPage, navigateTo }) {
           <li className={currentPage === 'contracts' ? 'active' : ''}>
             <button onClick={() => navigateTo('contracts')}>Contracts</button>
           </li>
-          <li className={currentPage === 'addUser' ? 'active' : ''}>
-            <button onClick={() => navigateTo('addUser')}>Users</button>
-          </li>
+          
+          {/* Conditionally render based on user role */}
+          {user && user.role === 'CEO' && (
+            <li className={currentPage === 'addUser' ? 'active' : ''}>
+              <button onClick={() => navigateTo('addUser')}>Users</button>
+            </li>
+          )}
+
           <li className={currentPage === 'settings' ? 'active' : ''}>
             <button onClick={() => navigateTo('settings')}>Settings</button>
           </li>

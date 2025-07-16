@@ -51,12 +51,23 @@ const authMiddleware = (req, res, next) => {
     } catch (err) {
         res.status(401).json({ msg: 'Token is not valid' });
     }
+    const ceoOnlyMiddleware = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (user.role !== 'CEO') {
+            return res.status(403).json({ msg: 'Access denied. CEO privileges required.' });
+        }
+        next();
+    } catch (err) {
+        res.status(500).send('Server error');
+    }
+};
 };
 
 // --- API ROUTES ---
 
 // AUTH
-app.post('/api/auth/register', authMiddleware, async (req, res) => {
+app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
   try {
     const { name, email, password } = req.body;
     let user = await User.findOne({ email });
@@ -75,7 +86,7 @@ app.post('/api/auth/login', async (req, res) => {
         if (!user) return res.status(400).json({ msg: 'Invalid credentials' });
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
-        const payload = { id: user.id };
+        const payload = { id: user.id, role: user.role };
         jwt.sign(payload, JWT_SECRET , { expiresIn: '8h' }, (err, token) => {
             if (err) throw err;
             res.json({ token });
@@ -206,10 +217,10 @@ app.put('/api/projects/:id/toggle-feature', authMiddleware, async (req, res) => 
 });
 
 // CLIENTS
-app.get('/api/clients', authMiddleware, async (req, res) => res.json(await Client.find()));
-app.post('/api/clients', authMiddleware, async (req, res) => res.status(201).json(await new Client(req.body).save()));
-app.put('/api/clients/:id', authMiddleware, async (req, res) => res.json(await Client.findByIdAndUpdate(req.params.id, req.body, { new: true })));
-app.delete('/api/clients/:id', authMiddleware, async (req, res) => res.json(await Client.findByIdAndDelete(req.params.id)));
+app.get('/api/clients', authMiddleware, ceoOnlyMiddleware, async (req, res) => res.json(await Client.find()));
+app.post('/api/clients', authMiddleware, ceoOnlyMiddleware, async (req, res) => res.status(201).json(await new Client(req.body).save()));
+app.put('/api/clients/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => res.json(await Client.findByIdAndUpdate(req.params.id, req.body, { new: true })));
+app.delete('/api/clients/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => res.json(await Client.findByIdAndDelete(req.params.id)));
 
 // TASKS
 app.get('/api/tasks', authMiddleware, async (req, res) => res.json(await Task.find().populate({ path: 'projectId', select: 'title' })));

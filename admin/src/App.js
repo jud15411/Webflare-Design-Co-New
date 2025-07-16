@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Import useEffect
+import { jwtDecode } from 'jwt-decode';
 import './App.css';
 
 // Import all page components
@@ -15,10 +16,33 @@ import AddUser from './pages/AddUser';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const token = localStorage.getItem('token');
+  const [user, setUser] = useState(null);
 
-  if (!token) {
-    return <Login />;
+  useEffect(() => {
+    // On initial load, check for a token and decode it
+    const token = localStorage.getItem('token');
+    try {
+      if (token) {
+        const decodedUser = jwtDecode(token);
+        setUser(decodedUser);
+      }
+    } catch (error) {
+      // If token is invalid or expired, clear it
+      localStorage.removeItem('token');
+    }
+  }, []);
+
+  // This function will be passed to the Login component
+  const handleLogin = () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const decodedUser = jwtDecode(token);
+      setUser(decodedUser);
+    }
+  };
+
+  if (!user) {
+    return <Login onLogin={handleLogin} />;
   }
 
   // Render the correct page based on the state
@@ -38,7 +62,7 @@ function App() {
 
   return (
     <div className="app-layout">
-      <Sidebar currentPage={currentPage} navigateTo={setCurrentPage} />
+      <Sidebar user={user} currentPage={currentPage} navigateTo={setCurrentPage} />
       <main className="main-content">
         {renderPage()}
       </main>
