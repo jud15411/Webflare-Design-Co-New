@@ -30,7 +30,7 @@ function Login({ onLogin }) { // Accept the onLogin prop
   return (
     <div className="login-container">
       <div className="login-box">
-        {/* Add your logo here */}
+        
         <img src="/images/Webflare_Design_Co.webp" alt="Webflare Design Co. Logo" className="login-logo" />
 
         <h2>Developer Gateway</h2>

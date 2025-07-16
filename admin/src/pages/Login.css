@@ -31,13 +31,11 @@
 }
 
 /* --- Logo & Headline --- */
+
 .login-logo {
-  width: 80px;
-  height: 80px;
+  /* This class is now just for sizing the image */
+  width: 150px; /* Adjust size as needed */
   margin-bottom: 20px;
-  background-color: #f0f0f0;
-  border-radius: 50%;
-  padding: 5px;
 }
 
 .login-box h2 {
