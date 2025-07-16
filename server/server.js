@@ -121,7 +121,7 @@ app.get('/api/featured-projects', async (req, res) => {
 });
 
 // PROJECTS
-app.get('/api/projects', authMiddleware, async (req, res) => res.json(await Project.find().populate('clientId')));
+app.get('/api/projects', async (req, res) => res.json(await Project.find().populate('clientId')));
 app.post('/api/projects', authMiddleware, (req, res) => {
     upload(req, res, async (err) => {
         if(err) return res.status(500).json({ msg: err });
