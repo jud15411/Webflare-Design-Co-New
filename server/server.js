@@ -22,6 +22,7 @@ const Task = require('./models/Task');
 const Invoice = require('./models/Invoice');
 const Contract = require('./models/Contract');
 const Service = require('./models/Service');
+const Comment = require('./models/Comment');
 
 // --- Middleware ---
 app.use(cors());
@@ -261,6 +262,36 @@ app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
         if (!updatedTask) return res.status(404).json({ msg: 'Task not found' });
         res.json(updatedTask);
     } catch (err) { res.status(500).send('Server Error'); }
+});
+
+// == COMMENTS ==
+// GET all comments for a specific project
+app.get('/api/projects/:projectId/comments', authMiddleware, async (req, res) => {
+    try {
+        const comments = await Comment.find({ project: req.params.projectId })
+            .sort({ createdAt: 'desc' }) // Show newest comments first
+            .populate('author', 'name'); // Get the author's name
+        res.json(comments);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+// POST a new comment on a project
+app.post('/api/projects/:projectId/comments', authMiddleware, async (req, res) => {
+    try {
+        const newComment = new Comment({
+            text: req.body.text,
+            author: req.userId, // Get user ID from the auth token
+            project: req.params.projectId
+        });
+        const comment = await newComment.save();
+        // Populate the author's name before sending it back
+        const populatedComment = await Comment.findById(comment._id).populate('author', 'name');
+        res.status(201).json(populatedComment);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
 });
 
 // == SERVICES ==
