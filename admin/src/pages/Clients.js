@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './Shared.css';
 
 function Clients() {
@@ -10,15 +10,15 @@ function Clients() {
 
   const token = localStorage.getItem('token');
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     const response = await fetch(`${process.env.REACT_APP_API_URL}/api/clients`, { headers: { 'x-auth-token': token }});
     const data = await response.json();
     setClients(data);
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchClients();
-  }, []);
+  }, [fetchClients]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -102,7 +102,6 @@ function Clients() {
         </table>
       </div>
 
-      {/* Add Client Modal */}
       {showAddModal && (
         <div className="modal-backdrop">
           <div className="modal-content">
@@ -118,7 +117,6 @@ function Clients() {
         </div>
       )}
 
-      {/* Edit Client Modal */}
       {showEditModal && editingClient && (
         <div className="modal-backdrop">
           <div className="modal-content">

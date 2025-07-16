@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './Shared.css';
 
 function Contracts() {
@@ -11,7 +11,7 @@ function Contracts() {
 
   const token = localStorage.getItem('token');
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const [contractsRes, projectsRes] = await Promise.all([
       fetch(`${process.env.REACT_APP_API_URL}/api/contracts`, { headers: { 'x-auth-token': token } }),
       fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } })
@@ -20,11 +20,11 @@ function Contracts() {
     const projectsData = await projectsRes.json();
     setContracts(contractsData);
     setProjects(projectsData);
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -114,17 +114,16 @@ function Contracts() {
         </table>
       </div>
 
-      {/* Add & Edit Modals */}
       { (showAddModal || (showEditModal && editingContract)) && (
         <div className="modal-backdrop">
           <div className="modal-content">
             <div className="modal-header"><h2 className="modal-title">{showEditModal ? 'Edit Contract' : 'Add New Contract'}</h2><button className="close-button" onClick={() => { setShowAddModal(false); setShowEditModal(false); }}>&times;</button></div>
             <form onSubmit={showEditModal ? handleUpdateContract : handleAddContract}>
-              <div className="form-group"><label>Contract Title</label><input type="text" name="title" value={editingContract?.title || newContract.title} onChange={handleInputChange} required /></div>
-              <div className="form-group"><label>Project</label><select name="projectId" value={editingContract?.projectId._id || newContract.projectId} onChange={handleInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
-              <div className="form-group"><label>Start Date</label><input type="date" name="startDate" value={editingContract?.startDate || newContract.startDate} onChange={handleInputChange} required /></div>
-              <div className="form-group"><label>End Date</label><input type="date" name="endDate" value={editingContract?.endDate || newContract.endDate} onChange={handleInputChange} required /></div>
-              <div className="form-group"><label>Status</label><select name="status" value={editingContract?.status || newContract.status} onChange={handleInputChange}><option>Draft</option><option>Sent</option><option>Active</option><option>Expired</option></select></div>
+              <div className="form-group"><label>Contract Title</label><input type="text" name="title" value={showEditModal ? editingContract.title : newContract.title} onChange={handleInputChange} required /></div>
+              <div className="form-group"><label>Project</label><select name="projectId" value={showEditModal ? editingContract.projectId._id : newContract.projectId} onChange={handleInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
+              <div className="form-group"><label>Start Date</label><input type="date" name="startDate" value={showEditModal ? editingContract.startDate : newContract.startDate} onChange={handleInputChange} required /></div>
+              <div className="form-group"><label>End Date</label><input type="date" name="endDate" value={showEditModal ? editingContract.endDate : newContract.endDate} onChange={handleInputChange} required /></div>
+              <div className="form-group"><label>Status</label><select name="status" value={showEditModal ? editingContract.status : newContract.status} onChange={handleInputChange}><option>Draft</option><option>Sent</option><option>Active</option><option>Expired</option></select></div>
               <button type="submit" className="add-button">{showEditModal ? 'Update Contract' : 'Save Contract'}</button>
             </form>
           </div>

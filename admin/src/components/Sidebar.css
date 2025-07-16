@@ -4,7 +4,6 @@
   color: #ecf0f1;
   height: 100vh;
   flex-shrink: 0;
-  position: relative; /* Needed for new footer positioning */
 }
 
 .sidebar-header {
@@ -24,31 +23,31 @@
   margin: 0;
 }
 
-.sidebar-nav li a {
+/* This now targets the button element */
+.sidebar-nav li button {
   display: block;
+  width: 100%;
   padding: 15px 20px;
   color: #ecf0f1;
   text-decoration: none;
-  transition: background-color 0.2s;
+  background-color: transparent;
+  border: none;
+  text-align: left;
+  font-family: inherit;
+  font-size: inherit;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.sidebar-nav li a:hover {
+.sidebar-nav li button:hover {
   background-color: #34495e;
 }
 
-.sidebar-nav li.active a {
+.sidebar-nav li.active button {
   background-color: #1abc9c;
   color: #fff;
 }
 
-/* REMOVE these old styles */
-/*
-.sidebar-footer { ... }
-.logout-button { ... }
-*/
-
-/* ADD this new style for the logout link */
 .nav-link-logout {
   color: #e74c3c !important; /* A red color to stand out */
   font-weight: 600;
