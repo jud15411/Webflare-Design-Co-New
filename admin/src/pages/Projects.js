@@ -6,7 +6,7 @@ function Projects() {
   // Existing states
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error] = useState('');
   
   // New states for detail view and comments
   const [selectedProject, setSelectedProject] = useState(null);
@@ -111,9 +111,9 @@ function Projects() {
             {projects.map(project => (
               <tr key={project._id}>
                 <td>
-                  <a onClick={() => handleProjectClick(project)} className="project-link">
+                  <button onClick={() => handleProjectClick(project)} className="project-link-button">
                     {project.title}
-                  </a>
+                  </button>
                 </td>
                 <td>{project.clientId?.name || 'N/A'}</td>
                 <td>{project.status}</td>

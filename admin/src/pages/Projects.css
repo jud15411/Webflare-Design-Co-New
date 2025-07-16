@@ -66,3 +66,15 @@
   font-size: 0.85rem;
   color: #6c757d;
 }
+
+.project-link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #1abc9c;
+  font-weight: bold;
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
