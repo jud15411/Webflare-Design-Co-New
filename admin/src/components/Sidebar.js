@@ -14,17 +14,27 @@ function Sidebar({ currentPage, navigateTo }) {
       </div>
       <nav className="sidebar-nav">
         <ul>
-          {/* Use buttons for state changes */}
           <li className={currentPage === 'dashboard' ? 'active' : ''}>
             <button onClick={() => navigateTo('dashboard')}>Dashboard</button>
           </li>
           <li className={currentPage === 'projects' ? 'active' : ''}>
             <button onClick={() => navigateTo('projects')}>Projects</button>
           </li>
-          <li className={currentPage === 'clients' ? 'active' : ''}>
+          <li className="currentPage === 'clients' ? 'active' : ''">
             <button onClick={() => navigateTo('clients')}>Clients</button>
           </li>
-          {/* ... continue this pattern for all other links ... */}
+          <li className={currentPage === 'tasks' ? 'active' : ''}>
+            <button onClick={() => navigateTo('tasks')}>Tasks</button>
+          </li>
+          <li className={currentPage === 'invoices' ? 'active' : ''}>
+            <button onClick={() => navigateTo('invoices')}>Invoices</button>
+          </li>
+          <li className={currentPage === 'contracts' ? 'active' : ''}>
+            <button onClick={() => navigateTo('contracts')}>Contracts</button>
+          </li>
+          <li className={currentPage === 'addUser' ? 'active' : ''}>
+            <button onClick={() => navigateTo('addUser')}>Users</button>
+          </li>
           <li className={currentPage === 'settings' ? 'active' : ''}>
             <button onClick={() => navigateTo('settings')}>Settings</button>
           </li>
