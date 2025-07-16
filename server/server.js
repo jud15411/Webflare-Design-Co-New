@@ -71,6 +71,25 @@ const adminOnlyMiddleware = (req, res, next) => {
     } catch (err) {
         res.status(500).send('Server error');
     }
+
+    app.get('/api/users', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    // Exclude the current user from the list and don't send back passwords
+    const users = await User.find({ _id: { $ne: req.userId } }).select('-password');
+    res.json(users);
+    });
+
+    // UPDATE a user's role
+    app.put('/api/users/:id/role', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+        const { role } = req.body;
+        const updatedUser = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-password');
+        res.json(updatedUser);
+    });
+
+    // DELETE a user
+    app.delete('/api/users/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+        await User.findByIdAndDelete(req.params.id);
+        res.json({ msg: 'User deleted successfully' });
+    });
 };
 
 // --- API ROUTES ---

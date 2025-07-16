@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Import useEffect
+import React, { useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import './App.css';
 
@@ -12,7 +12,7 @@ import Tasks from './pages/Tasks';
 import Invoices from './pages/Invoices';
 import Contracts from './pages/Contracts';
 import Settings from './pages/Settings';
-import AddUser from './pages/AddUser';
+import Users from './pages/Users'; // Changed from AddUser to Users
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -55,7 +55,7 @@ function App() {
       case 'invoices': return <Invoices />;
       case 'contracts': return <Contracts />;
       case 'settings': return <Settings />;
-      case 'addUser': return <AddUser />;
+      case 'addUser': return <Users />; // Changed this case to render the Users component
       default: return <Dashboard />;
     }
   };

@@ -1,0 +1,28 @@
+.confirm-modal {
+  text-align: center;
+  max-width: 400px;
+}
+.confirm-modal p {
+  font-size: 1.1rem;
+  margin-bottom: 25px;
+}
+.confirm-modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+.confirm-modal-actions button {
+  padding: 10px 25px;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.cancel-button {
+  background-color: #ecf0f1;
+  color: #34495e;
+}
+.confirm-button {
+  background-color: #e74c3c;
+  color: white;
+}

@@ -40,8 +40,8 @@ function Sidebar({ user, currentPage, navigateTo }) {
             </li>
           )}
           {user && ['CEO'].includes(user.role) && (
-            <li className={currentPage === 'addUser' ? 'active' : ''}>
-              <button onClick={() => navigateTo('addUser')}>Users</button>
+            <li className={currentPage === 'user' ? 'active' : ''}>
+              <button onClick={() => navigateTo('user')}>Users</button>
             </li>
           )}
           <li className={currentPage === 'settings' ? 'active' : ''}>
