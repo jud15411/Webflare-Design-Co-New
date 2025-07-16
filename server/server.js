@@ -51,7 +51,8 @@ const authMiddleware = (req, res, next) => {
     } catch (err) {
         res.status(401).json({ msg: 'Token is not valid' });
     }
-    const ceoOnlyMiddleware = async (req, res, next) => {
+};
+const ceoOnlyMiddleware = async (req, res, next) => {
     try {
         const user = await User.findById(req.userId);
         if (user.role !== 'CEO') {
@@ -61,7 +62,6 @@ const authMiddleware = (req, res, next) => {
     } catch (err) {
         res.status(500).send('Server error');
     }
-};
 };
 
 // --- API ROUTES ---
