@@ -8,7 +8,7 @@ function Home() {
   useEffect(() => {
     const fetchFeatured = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/featured-projects');
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/featured-projects`);
         const data = await response.json();
         setFeaturedProjects(data);
       } catch (err) {
@@ -59,7 +59,7 @@ function Home() {
             <div className="portfolio-item" key={project._id}>
               {/* This now correctly points to your server's image URL */}
               <img 
-                src={project.imageUrl ? `http://localhost:8080/${project.imageUrl}` : "/images/portfolio-placeholder.jpg"} 
+                src={project.imageUrl ? `${process.env.REACT_APP_API_URL}/${project.imageUrl}` : "/images/portfolio-placeholder.jpg"} 
                 alt={project.title}
               />
               <div className="portfolio-overlay"><h3>{project.title}</h3></div>

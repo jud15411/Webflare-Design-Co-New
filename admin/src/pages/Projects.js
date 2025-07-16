@@ -18,8 +18,8 @@ function Projects() {
     setIsLoading(true);
     try {
       const [projectsRes, clientsRes] = await Promise.all([
-        fetch('http://localhost:8080/api/projects', { headers: { 'x-auth-token': token } }),
-        fetch('http://localhost:8080/api/clients', { headers: { 'x-auth-token': token } })
+        fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
+        fetch(`${process.env.REACT_APP_API_URL}/api/clients`, { headers: { 'x-auth-token': token } })
       ]);
 
       if (!projectsRes.ok || !clientsRes.ok) {
@@ -63,7 +63,7 @@ function Projects() {
     Object.keys(newProject).forEach(key => formData.append(key, newProject[key]));
     if (projectImage) formData.append('projectImage', projectImage);
 
-    await fetch('http://localhost:8080/api/projects', {
+    await fetch(`${process.env.REACT_APP_API_URL}/api/projects`, {
       method: 'POST',
       headers: { 'x-auth-token': token },
       body: formData
@@ -89,7 +89,7 @@ function Projects() {
     formData.append('clientId', editingProject.clientId._id || editingProject.clientId);
     if (projectImage) formData.append('projectImage', projectImage);
 
-    await fetch(`http://localhost:8080/api/projects/${editingProject._id}`, {
+    await fetch(`${process.env.REACT_APP_API_URL}/api/projects/${editingProject._id}`, {
       method: 'PUT',
       headers: { 'x-auth-token': token },
       body: formData
@@ -103,7 +103,7 @@ function Projects() {
 
   const handleDeleteProject = async (projectId) => {
     if (window.confirm('Are you sure you want to delete this project?')) {
-      await fetch(`http://localhost:8080/api/projects/${projectId}`, {
+      await fetch(`${process.env.REACT_APP_API_URL}/api/projects/${projectId}`, {
         method: 'DELETE',
         headers: { 'x-auth-token': token }
       });
@@ -113,7 +113,7 @@ function Projects() {
   
   const handleToggleFeature = async (projectId) => {
     setError('');
-    const response = await fetch(`http://localhost:8080/api/projects/${projectId}/toggle-feature`, {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/projects/${projectId}/toggle-feature`, {
         method: 'PUT',
         headers: { 'x-auth-token': token }
     });

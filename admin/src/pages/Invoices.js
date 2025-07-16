@@ -13,8 +13,8 @@ function Invoices() {
 
   const fetchData = async () => {
     const [invoicesRes, projectsRes] = await Promise.all([
-      fetch('http://localhost:8080/api/invoices', { headers: { 'x-auth-token': token } }),
-      fetch('http://localhost:8080/api/projects', { headers: { 'x-auth-token': token } })
+      fetch(`${process.env.REACT_APP_API_URL}/api/invoices`, { headers: { 'x-auth-token': token } }),
+      fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } })
     ]);
     const invoicesData = await invoicesRes.json();
     const projectsData = await projectsRes.json();
@@ -37,7 +37,7 @@ function Invoices() {
   
   const handleAddInvoice = async (e) => {
     e.preventDefault();
-    await fetch('http://localhost:8080/api/invoices', {
+    await fetch(`${process.env.REACT_APP_API_URL}/api/invoices`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
       body: JSON.stringify(newInvoice)
@@ -58,7 +58,7 @@ function Invoices() {
 
   const handleUpdateInvoice = async (e) => {
     e.preventDefault();
-    await fetch(`http://localhost:8080/api/invoices/${editingInvoice._id}`, {
+    await fetch(`${process.env.REACT_APP_API_URL}/api/invoices/${editingInvoice._id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
       body: JSON.stringify(editingInvoice)
@@ -70,7 +70,7 @@ function Invoices() {
 
   const handleDeleteInvoice = async (invoiceId) => {
     if (window.confirm('Are you sure you want to delete this invoice?')) {
-      await fetch(`http://localhost:8080/api/invoices/${invoiceId}`, {
+      await fetch(`${process.env.REACT_APP_API_URL}/api/invoices/${invoiceId}`, {
         method: 'DELETE',
         headers: { 'x-auth-token': token }
       });

@@ -48,8 +48,8 @@ function Tasks() {
     const token = localStorage.getItem('token');
     // Fetch Tasks & Projects
     const [tasksRes, projectsRes] = await Promise.all([
-      fetch('http://localhost:8080/api/tasks', { headers: { 'x-auth-token': token } }),
-      fetch('http://localhost:8080/api/projects', { headers: { 'x-auth-token': token } })
+      fetch(`${process.env.REACT_APP_API_URL}/api/tasks`, { headers: { 'x-auth-token': token } }),
+      fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } })
     ]);
     const tasksData = await tasksRes.json();
     const projectsData = await projectsRes.json();
@@ -75,7 +75,7 @@ function Tasks() {
 
       // Persist the change to the backend
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:8080/api/tasks/${active.id}/status`, {
+      await fetch(`${process.env.REACT_APP_API_URL}/api/tasks/${active.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
         body: JSON.stringify({ status: newStatus }),
@@ -90,7 +90,7 @@ function Tasks() {
   const handleAddTask = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
-    await fetch('http://localhost:8080/api/tasks', {
+    await fetch(`${process.env.REACT_APP_API_URL}/api/tasks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
       body: JSON.stringify(newTask)

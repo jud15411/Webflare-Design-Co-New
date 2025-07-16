@@ -15,7 +15,7 @@ function Dashboard() {
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:8080/api/dashboard/stats', {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/dashboard/stats`, {
           headers: { 'x-auth-token': token }
         });
         

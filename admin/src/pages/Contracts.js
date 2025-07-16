@@ -13,8 +13,8 @@ function Contracts() {
 
   const fetchData = async () => {
     const [contractsRes, projectsRes] = await Promise.all([
-      fetch('http://localhost:8080/api/contracts', { headers: { 'x-auth-token': token } }),
-      fetch('http://localhost:8080/api/projects', { headers: { 'x-auth-token': token } })
+      fetch(`${process.env.REACT_APP_API_URL}/api/contracts`, { headers: { 'x-auth-token': token } }),
+      fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } })
     ]);
     const contractsData = await contractsRes.json();
     const projectsData = await projectsRes.json();
@@ -37,7 +37,7 @@ function Contracts() {
 
   const handleAddContract = async (e) => {
     e.preventDefault();
-    await fetch('http://localhost:8080/api/contracts', {
+    await fetch(`${process.env.REACT_APP_API_URL}/api/contracts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
       body: JSON.stringify(newContract)
@@ -58,7 +58,7 @@ function Contracts() {
   
   const handleUpdateContract = async (e) => {
     e.preventDefault();
-    await fetch(`http://localhost:8080/api/contracts/${editingContract._id}`, {
+    await fetch(`${process.env.REACT_APP_API_URL}/api/contracts/${editingContract._id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
       body: JSON.stringify(editingContract)
@@ -70,7 +70,7 @@ function Contracts() {
 
   const handleDeleteContract = async (contractId) => {
     if (window.confirm('Are you sure you want to delete this contract?')) {
-      await fetch(`http://localhost:8080/api/contracts/${contractId}`, {
+      await fetch(`${process.env.REACT_APP_API_URL}/api/contracts/${contractId}`, {
         method: 'DELETE',
         headers: { 'x-auth-token': token }
       });

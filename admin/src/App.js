@@ -11,6 +11,7 @@ import Tasks from './pages/Tasks';
 import Invoices from './pages/Invoices';
 import Contracts from './pages/Contracts';
 import Settings from './pages/Settings';
+import AddUser from './pages/AddUser';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -30,6 +31,7 @@ function App() {
       case 'invoices': return <Invoices />;
       case 'contracts': return <Contracts />;
       case 'settings': return <Settings />;
+      case 'addUser': return <AddUser />;
       default: return <Dashboard />;
     }
   };

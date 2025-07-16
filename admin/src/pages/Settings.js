@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import './Shared.css';
 
 function Settings() {
-  const [user, setUser] = useState(null); // Initial state is null
-  const [isLoading, setIsLoading] = useState(true); // Add a loading state
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:8080/api/auth/user', {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/user`, {
           headers: { 'x-auth-token': token }
         });
         const data = await response.json();
@@ -18,7 +18,7 @@ function Settings() {
       } catch (err) {
         console.error("Failed to fetch user data", err);
       } finally {
-        setIsLoading(false); // Set loading to false after the fetch is done
+        setIsLoading(false);
       }
     };
     fetchUserData();
@@ -30,20 +30,25 @@ function Settings() {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
-    // ... update logic
+    setMessage('');
+    const token = localStorage.getItem('token');
+    
+    await fetch(`${process.env.REACT_APP_API_URL}/api/auth/user`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+      body: JSON.stringify({ name: user.name, email: user.email })
+    });
+
+    setMessage('Profile updated successfully!');
   };
 
-  // --- THIS IS THE FIX ---
-  // If data is still loading, show a message instead of the form.
   if (isLoading) {
     return <div>Loading Settings...</div>;
   }
-  // If the fetch failed and user is still null, show an error.
   if (!user) {
     return <div>Error: Could not load user data.</div>;
   }
 
-  // Once user data exists, render the form.
   return (
     <div>
        <h1 className="page-title">Settings</h1>

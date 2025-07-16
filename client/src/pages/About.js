@@ -27,7 +27,7 @@ function About() {
       </div>
       <div className="team-grid">
         <div className="team-member-card">
-          <img src="/Images/team-member-1.jpg" alt="Team Member 1" className="team-member-photo"/>
+          <img src="/images/team-member-1.jpg" alt="Team Member 1" className="team-member-photo"/>
           <h3>Judson Wells</h3>
           <p>Founder & Head Developer</p>
         </div>

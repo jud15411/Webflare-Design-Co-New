@@ -8,7 +8,7 @@ function Navbar() {
       <div className="navbar-container">
         {/* Replace the text logo with an image tag */}
         <Link to="/" className="navbar-logo">
-          <img src="/Images/Webflare_Design_Co.webp" alt="Webflare Design Co. Logo" />
+          <img src="/images/Webflare_Design_Co.webp" alt="Webflare Design Co. Logo" />
         </Link>
         <ul className="nav-menu">
           <li className="nav-item"><Link to="/" className="nav-links">Home</Link></li>

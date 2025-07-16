@@ -35,13 +35,14 @@ function Sidebar({ currentPage, navigateTo }) {
           <li className={currentPage === 'settings' ? 'active' : ''}>
             <a onClick={() => navigateTo('settings')}>Settings</a>
           </li>
-          {/* Add the new logout list item here */}
+          <li className={currentPage === 'addUser' ? 'active' : ''}>
+            <a onClick={() => navigateTo('addUser')}>Users</a>
+          </li>
           <li>
             <a onClick={handleLogout} className="nav-link-logout">Log Out</a>
           </li>
         </ul>
       </nav>
-      {/* The sidebar-footer div is no longer needed */}
     </aside>
   );
 }

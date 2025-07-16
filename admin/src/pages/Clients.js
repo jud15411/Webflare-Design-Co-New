@@ -11,7 +11,7 @@ function Clients() {
   const token = localStorage.getItem('token');
 
   const fetchClients = async () => {
-    const response = await fetch('http://localhost:8080/api/clients', { headers: { 'x-auth-token': token }});
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/clients`, { headers: { 'x-auth-token': token }});
     const data = await response.json();
     setClients(data);
   };
@@ -31,7 +31,7 @@ function Clients() {
 
   const handleAddClient = async (e) => {
     e.preventDefault();
-    await fetch('http://localhost:8080/api/clients', {
+    await fetch(`${process.env.REACT_APP_API_URL}/api/clients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
       body: JSON.stringify(newClient)
@@ -48,7 +48,7 @@ function Clients() {
 
   const handleUpdateClient = async (e) => {
     e.preventDefault();
-    await fetch(`http://localhost:8080/api/clients/${editingClient._id}`, {
+    await fetch(`${process.env.REACT_APP_API_URL}/api/clients/${editingClient._id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
       body: JSON.stringify(editingClient)
@@ -60,7 +60,7 @@ function Clients() {
 
   const handleDeleteClient = async (clientId) => {
     if (window.confirm('Are you sure you want to delete this client? This may affect associated projects.')) {
-      await fetch(`http://localhost:8080/api/clients/${clientId}`, {
+      await fetch(`${process.env.REACT_APP_API_URL}/api/clients/${clientId}`, {
         method: 'DELETE',
         headers: { 'x-auth-token': token }
       });
