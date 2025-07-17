@@ -246,16 +246,17 @@ app.get('/api/auth/verify-email', async (req, res) => {
             await user.save(); // THIS IS THE CRITICAL SAVE OPERATION
             console.log(`User ${user.email} successfully verified!`);
         } catch (saveErr) {
-            // If save fails, log the specific Mongoose error
             console.error('Mongoose save error during email verification:', saveErr);
-            // Redirect with a specific message for save failure
-            return res.redirect(`${CLIENT_URL}/login?verificationStatus=error&message=${encodeURIComponent('Failed to update verification status due to a database issue.')}`);
+            // If save fails, log the specific Mongoose error
+            let errorMessage = 'Failed to update verification status due to a database issue.';
+            if (saveErr.name === 'ValidationError') {
+                errorMessage = `Validation Error: ${saveErr.message}`;
+            }
+            return res.redirect(`${CLIENT_URL}/login?verificationStatus=error&message=${encodeURIComponent(errorMessage)}`);
         }
 
-        // Redirect to login page with a success indicator
         return res.redirect(`${CLIENT_URL}/login?verificationStatus=success&email=${encodeURIComponent(user.email)}`);
     } catch (err) {
-        // Catch any other unexpected errors during the overall process
         console.error('General email verification process error:', err);
         return res.redirect(`${CLIENT_URL}/login?verificationStatus=error&message=${encodeURIComponent('An unexpected server error occurred during verification.')}`);
     }
@@ -506,12 +507,170 @@ app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
 app.post('/api/tasks/:taskId/time', authMiddleware, async (req, res) => {
     try {
         const { hours, description } = req.body;
-        const task = await Task.findById(req.params.taskId);
+        // FIX: Find task by taskId from params, not task.projectId
+        const task = await Task.findById(req.params.taskId); // Corrected line
         if (!task) return res.status(404).json({ msg: 'Task not found' });
         const newTimeEntry = new TimeEntry({ hours, description, user: req.userId, task: req.params.taskId, project: task.projectId });
         await newTimeEntry.save();
         res.status(201).json(newTimeEntry);
     } catch (err) { res.status(500).send('Server Error'); }
+});
+
+
+// == FINANCIAL (Invoices, Contracts) ==
+app.get('/api/invoices', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Invoice.find().populate({ path: 'projectId', populate: { path: 'clientId' } })));
+
+app.post('/api/invoices', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        const counter = await Counter.findOneAndUpdate({ _id: 'invoiceNumber' }, { $inc: { sequence_value: 1 } }, { new: true, upsert: true });
+        const newInvoiceNumber = `WDC-${String(counter.sequence_value).padStart(4, '0')}`;
+        const newInvoice = new Invoice({ ...req.body, invoiceNumber: newInvoiceNumber });
+        await newInvoice.save();
+        const ceo = await User.findOne({ role: 'CEO' });
+        if (ceo) {
+            const creator = await User.findById(req.userId);
+            const message = `A new invoice (${newInvoice.invoiceNumber}) was created by ${creator.name}.`;
+            new Notification({ recipient: ceo._id, message, link: `/invoices` }).save();
+        }
+        res.status(201).json(newInvoice);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+app.put('/api/invoices/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Invoice.findByIdAndUpdate(req.params.id, req.body, { new: true })));
+app.delete('/api/invoices/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Invoice.findByIdAndDelete(req.params.id)));
+
+app.get('/api/contracts', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.find().populate({ path: 'projectId', populate: { path: 'clientId' } })));
+
+app.post('/api/contracts', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    const newContract = await new Contract(req.body).save();
+    const ceo = await User.findOne({ role: 'CEO' });
+    if (ceo) {
+        const creator = await User.findById(req.userId);
+        const project = await Project.findById(newContract.projectId);
+        const client = await Client.findById(project.clientId);
+        const message = `A new contract for ${client.name} (${project.title}) was created by ${creator.name}.`;
+        new Notification({ recipient: ceo._id, message, link: `/contracts` }).save();
+    }
+    res.status(201).json(newContract);
+});
+
+app.put('/api/contracts/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.findByIdAndUpdate(req.params.id, req.body, { new: true })));
+app.delete('/api/contracts/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.findByIdAndDelete(req.params.id)));
+
+
+// == REPORTS == (NEW SECTION)
+app.get('/api/reports/time-by-project', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        const timeReport = await TimeEntry.aggregate([
+            {
+                $group: {
+                    _id: "$project", // Group by project ID
+                    totalHours: { $sum: "$hours" } // Sum hours for each project
+                }
+            },
+            {
+                $lookup: {
+                    from: 'projects', // The collection name for Project model
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'projectDetails'
+                }
+            },
+            {
+                $unwind: { path: '$projectDetails', preserveNullAndEmptyArrays: true } // Use preserveNullAndEmptyArrays for projects that might be deleted
+            },
+            {
+                $project: {
+                    _id: 0, // Exclude the default _id
+                    projectId: '$_id', // Rename _id to projectId
+                    projectTitle: { $ifNull: ['$projectDetails.title', 'Unknown Project'] }, // Use ifNull to handle potentially missing projectDetails
+                    totalHours: '$totalHours'
+                }
+            },
+            { $sort: { projectTitle: 1 } } // Sort by project title
+        ]);
+        res.json(timeReport);
+    } catch (err) {
+        console.error('Error fetching time report by project:', err);
+        res.status(500).send('Server Error fetching time report by project.');
+    }
+});
+
+app.get('/api/reports/time-by-user-project', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        const timeReport = await TimeEntry.aggregate([
+            {
+                $group: {
+                    _id: { user: "$user", project: "$project" }, // Group by user AND project
+                    totalHours: { $sum: "$hours" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: '_id.user',
+                    foreignField: '_id',
+                    as: 'userDetails'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'projects',
+                    localField: '_id.project',
+                    foreignField: '_id',
+                    as: 'projectDetails'
+                }
+            },
+            {
+                $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true }
+            },
+            {
+                $unwind: { path: '$projectDetails', preserveNullAndEmptyArrays: true }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    userId: '$_id.user',
+                    userName: { $ifNull: ['$userDetails.name', 'Unknown User'] },
+                    projectId: '$_id.project',
+                    projectTitle: { $ifNull: ['$projectDetails.title', 'Unknown Project'] },
+                    totalHours: '$totalHours'
+                }
+            },
+            { $sort: { userName: 1, projectTitle: 1 } }
+        ]);
+        res.json(timeReport);
+    } catch (err) {
+        console.error('Error fetching time report by user and project:', err);
+        res.status(500).send('Server Error fetching time report by user and project.');
+    }
+});
+
+app.get('/api/reports/task-status-summary', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        const taskStatusSummary = await Task.aggregate([
+            {
+                $group: {
+                    _id: "$status", // Group by task status
+                    count: { $sum: 1 } // Count tasks in each status
+                }
+            },
+            {
+                $project: {
+                    _id: 0, // Exclude default _id
+                    status: '$_id', // Rename _id to status
+                    count: 1 // Include count
+                }
+            },
+            { $sort: { status: 1 } } // Sort by status
+        ]);
+        res.json(taskStatusSummary);
+    } catch (err) {
+        console.error('Error fetching task status summary:', err);
+        res.status(500).send('Server Error fetching task status summary.');
+    }
 });
 
 
