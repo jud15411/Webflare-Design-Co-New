@@ -60,7 +60,6 @@ function Tasks() {
     setIsLoading(true);
     setError('');
     try {
-        // Fetch all necessary data in parallel, including the current user's info
         const [tasksRes, projectsRes, usersRes, currentUserRes] = await Promise.all([
             fetch(`${process.env.REACT_APP_API_URL}/api/tasks`, { headers: { 'x-auth-token': token } }),
             fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
@@ -68,21 +67,29 @@ function Tasks() {
             fetch(`${process.env.REACT_APP_API_URL}/api/auth/user`, { headers: { 'x-auth-token': token } })
         ]);
 
-        if (!tasksRes.ok || !projectsRes.ok || !usersRes.ok || !currentUserRes.ok) {
-            throw new Error('A network error occurred while fetching data.');
+        // Only the essential data needs to be successful
+        if (!tasksRes.ok || !projectsRes.ok || !currentUserRes.ok) {
+            throw new Error('A network error occurred while fetching page data.');
         }
 
         const tasksData = await tasksRes.json();
         const projectsData = await projectsRes.json();
-        const usersData = await usersRes.json();
         const currentUserData = await currentUserRes.json();
+        
+        let usersData = [];
+        // Handle the users list gracefully
+        if (usersRes.ok) {
+            // If the request for all users was successful (i.e., user is an admin)
+            usersData = await usersRes.json();
+        } else {
+            // If it failed, default to a list containing only the current user
+            usersData = [currentUserData];
+        }
 
-        // **Apply filtering based on the user's role**
+        // Apply filtering logic based on user role
         if (currentUserData.role === 'CEO') {
-            // CEOs can see all tasks
             setTasks(tasksData);
         } else {
-            // Other users see only tasks assigned to them
             const myTasks = tasksData.filter(task => task.assignedTo?._id === currentUserData._id);
             setTasks(myTasks);
         }
@@ -160,7 +167,6 @@ function Tasks() {
       headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
       body: JSON.stringify(editingTask)
     });
-    // We keep the modal open after updating to allow for time logging
     fetchData();
   };
 
