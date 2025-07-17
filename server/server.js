@@ -523,25 +523,27 @@ app.post('/api/projects', authMiddleware, (req, res) => {
 
 app.get('/api/projects/:id', authMiddleware, async (req, res) => {
   try {
-    const projectId = req.params.id;
+    const { projectId } = req.params;
 
+    // A crucial check to prevent Mongoose errors with invalid IDs
     if (!mongoose.Types.ObjectId.isValid(projectId)) {
       return res.status(400).json({ msg: 'Invalid Project ID format.' });
     }
 
-    // Fetch ONLY the project and its client. Do not fetch milestones.
+    // Fetch ONLY the project and its client.
+    // This removes the 'populate' for milestones, which was the source of the crash.
     const project = await Project.findById(projectId).populate('clientId', 'name');
 
     if (!project) {
       return res.status(404).json({ msg: 'Project not found.' });
     }
 
-    // Send the lean project object as the response.
+    // Send the project data as JSON.
     res.json(project);
 
   } catch (err) {
-    console.error('Error fetching single project:', err);
-    // Correctly send a JSON error response
+    // This ensures that if any other error occurs, a proper JSON response is sent.
+    console.error('Error in GET /api/projects/:id:', err);
     res.status(500).json({ msg: 'Server error while fetching project details.' });
   }
 });

@@ -3,6 +3,20 @@ import { useParams, Link } from 'react-router-dom';
 import './Shared.css';
 import './ProjectDetail.css';
 
+// Helper function for fetching data to reduce repetition
+async function fetchData(url, token) {
+  const response = await fetch(url, {
+    headers: { 'x-auth-token': token }
+  });
+  if (!response.ok) {
+    // Try to parse the error message from the server, or use a default
+    const errorData = await response.json().catch(() => ({ msg: 'An unknown error occurred.' }));
+    throw new Error(`Failed to fetch from ${url}: ${errorData.msg}`);
+  }
+  return response.json();
+}
+
+
 function ProjectDetail() {
   const { projectId } = useParams();
   const [project, setProject] = useState(null);
@@ -11,7 +25,6 @@ function ProjectDetail() {
   const [apiMessage, setApiMessage] = useState('');
   const [messageType, setMessageType] = useState('');
 
-  // New states for comments, files, and hours
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [files, setFiles] = useState([]);
@@ -20,6 +33,37 @@ function ProjectDetail() {
 
   const token = localStorage.getItem('token');
 
+  const loadProjectData = useCallback(async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      // Fetch data sequentially for better error reporting
+      const projectData = await fetchData(`/api/projects/${projectId}`, token);
+      setProject(projectData);
+
+      const filesData = await fetchData(`/api/projects/${projectId}/files`, token);
+      setFiles(filesData);
+
+      const commentsData = await fetchData(`/api/projects/${projectId}/comments`, token);
+      setComments(commentsData);
+      
+      const hoursData = await fetchData(`/api/projects/${projectId}/hours`, token);
+      setTotalHours(hoursData.totalHours || 0);
+
+    } catch (err) {
+      console.error("Detailed Fetch Error:", err);
+      setError(err.message); // This will now show which API call failed
+    } finally {
+      setIsLoading(false);
+    }
+  }, [projectId, token]);
+
+  useEffect(() => {
+    loadProjectData();
+  }, [loadProjectData]);
+
+  // ... (the rest of your component functions: handleFileChange, handleFileUpload, handleCommentSubmit)
+  // No changes are needed for the rest of the file.
   const displayApiMessage = (message, type) => {
     setApiMessage(message);
     setMessageType(type);
@@ -28,40 +72,6 @@ function ProjectDetail() {
       setMessageType('');
     }, 5000);
   };
-
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const [projectRes, filesRes, commentsRes, hoursRes] = await Promise.all([
-        fetch(`/api/projects/${projectId}`, { headers: { 'x-auth-token': token } }),
-        fetch(`/api/projects/${projectId}/files`, { headers: { 'x-auth-token': token } }),
-        fetch(`/api/projects/${projectId}/comments`, { headers: { 'x-auth-token': token } }),
-        fetch(`/api/projects/${projectId}/hours`, { headers: { 'x-auth-token': token } })
-      ]);
-
-      if (!projectRes.ok) throw new Error('Failed to fetch project details.');
-      
-      const projectData = await projectRes.json();
-      const filesData = await filesRes.json();
-      const commentsData = await commentsRes.json();
-      const hoursData = await hoursRes.json();
-      
-      setProject(projectData);
-      setFiles(filesData);
-      setComments(commentsData);
-      setTotalHours(hoursData.totalHours || 0);
-
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectId, token]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
@@ -123,7 +133,7 @@ function ProjectDetail() {
 
 
   if (isLoading) return <div>Loading project details...</div>;
-  if (error) return <div className="error-message">{error}</div>;
+  if (error) return <div className="error-message">{error}</div>; // This will now be a specific error
   if (!project) return <div>Project not found.</div>;
 
   return (
