@@ -8,8 +8,10 @@
 
 .sidebar-header {
   padding: 20px;
-  text-align: center;
   background-color: #34495e;
+  display: flex; /* Add this */
+  justify-content: space-between; /* Add this */
+  align-items: center; /* Add this */
 }
 
 .sidebar-header h3 {

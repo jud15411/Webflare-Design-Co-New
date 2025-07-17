@@ -6,6 +6,7 @@ function Notifications() {
   const [isOpen, setIsOpen] = useState(false);
   const token = localStorage.getItem('token');
 
+  // fetchNotifications function remains the same
   const fetchNotifications = useCallback(async () => {
     if (!token) return;
     try {
@@ -20,24 +21,28 @@ function Notifications() {
   }, [token]);
 
   useEffect(() => {
-    // Fetch notifications on initial load
     fetchNotifications();
-    // Poll for new notifications every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval); // Cleanup on component unmount
+    return () => clearInterval(interval);
   }, [fetchNotifications]);
 
+  // This is the updated logic
   const handleIconClick = async () => {
-    setIsOpen(!isOpen);
-    // If opening the panel and there are unread notifications, mark them as read
+    // When we are opening the panel for the first time with notifications
     if (!isOpen && notifications.length > 0) {
-      await fetch(`${process.env.REACT_APP_API_URL}/api/notifications/mark-read`, {
-        method: 'PUT',
-        headers: { 'x-auth-token': token }
-      });
-      // Set notifications to empty immediately for a faster UI update
-      setNotifications([]);
+      try {
+        // Mark them as read on the backend
+        await fetch(`${process.env.REACT_APP_API_URL}/api/notifications/mark-read`, {
+          method: 'PUT',
+          headers: { 'x-auth-token': token }
+        });
+        // We will let the next poll clear the number, but keep them visible for now.
+      } catch (error) {
+        console.error("Could not mark notifications as read:", error);
+      }
     }
+    // Simply toggle the panel's visibility
+    setIsOpen(!isOpen);
   };
 
   return (
