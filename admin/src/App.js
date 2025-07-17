@@ -8,6 +8,7 @@ import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
+import ProjectDetail from './pages/ProjectDetail'; // 1. Import ProjectDetail
 import Clients from './pages/Clients';
 import Tasks from './pages/Tasks';
 import Invoices from './pages/Invoices';
@@ -25,6 +26,10 @@ const AppLayout = ({ user, onLogout }) => (
       {/* All protected routes are nested here */}
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
+        
+        {/* 2. Add the specific route for a single project */}
+        <Route path="/projects/:projectId" element={<ProjectDetail />} />
+        
         <Route path="/projects" element={<Projects />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/clients" element={<Clients />} />
