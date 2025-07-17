@@ -522,37 +522,30 @@ app.post('/api/projects', authMiddleware, (req, res) => {
 });
 
 app.get('/api/projects/:id', authMiddleware, async (req, res) => {
-  // Replace the entire function with this new implementation
   try {
-    const projectId = req.params.id;
+    const { projectId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ msg: 'Invalid Project ID format.' });
+      return res.status(400).json({ msg: 'Invalid Project ID.' });
     }
 
-    // 1. Fetch the project and its client, converting the result to a plain JavaScript object
+    // This single query now fetches the project AND its milestones
+    // by populating the virtual field we created earlier.
     const project = await Project.findById(projectId)
       .populate('clientId', 'name')
-      .lean(); // .lean() is important for performance and for modifying the object
+      .populate('milestones'); // <-- This is the key change
 
     if (!project) {
       return res.status(404).json({ msg: 'Project not found.' });
     }
 
-    // 2. Fetch all milestones for this project separately
-    const milestones = await Milestone.find({ projectId: project._id }).lean();
-
-    // 3. Attach the fetched milestones to the project object
-    project.milestones = milestones;
-    
-    // The front-end code (ProjectDetail.js) already correctly sorts the milestones by date,
-    // so we can send them as-is from the server.
-
+    // The project object now automatically includes the milestones array.
     res.json(project);
-    
+
   } catch (err) {
-    console.error('Error fetching single project:', err);
-    res.status(500).json({ msg: 'Server Error fetching project details.' });
+    // This will catch any errors during the find or populate process
+    console.error('Error fetching single project with milestones:', err);
+    res.status(500).json({ msg: 'Server error while fetching project details.' });
   }
 });
 
