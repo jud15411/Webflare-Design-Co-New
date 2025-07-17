@@ -521,24 +521,39 @@ app.post('/api/projects', authMiddleware, (req, res) => {
     });
 });
 
-app.put('/api/projects/:id', authMiddleware, (req, res) => {
-    uploadProjectImage(req, res, async (err) => {
-        if (err) return res.status(500).json({ msg: err.message });
-        try {
-            const project = await Project.findById(req.params.id);
-            if (!project) return res.status(404).json({ msg: 'Project not found' });
-            if (req.file) {
-                if (project.imageUrl) fs.unlink(path.join(__dirname, project.imageUrl), (unlinkErr) => { if (unlinkErr) console.error("Error deleting old image:", unlinkErr); });
-                project.imageUrl = `/public/uploads/${req.file.filename}`;
-            }
-            project.title = req.body.title;
-            project.description = req.body.description;
-            project.status = req.body.status;
-            project.clientId = req.body.clientId;
-            const updatedProject = await project.save();
-            res.json(updatedProject);
-        } catch (serverErr) { res.status(500).send('Server error on update'); }
-    });
+app.get('/api/projects/:id', authMiddleware, async (req, res) => {
+  // Replace the entire function with this new implementation
+  try {
+    const projectId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({ msg: 'Invalid Project ID format.' });
+    }
+
+    // 1. Fetch the project and its client, converting the result to a plain JavaScript object
+    const project = await Project.findById(projectId)
+      .populate('clientId', 'name')
+      .lean(); // .lean() is important for performance and for modifying the object
+
+    if (!project) {
+      return res.status(404).json({ msg: 'Project not found.' });
+    }
+
+    // 2. Fetch all milestones for this project separately
+    const milestones = await Milestone.find({ projectId: project._id }).lean();
+
+    // 3. Attach the fetched milestones to the project object
+    project.milestones = milestones;
+    
+    // The front-end code (ProjectDetail.js) already correctly sorts the milestones by date,
+    // so we can send them as-is from the server.
+
+    res.json(project);
+    
+  } catch (err) {
+    console.error('Error fetching single project:', err);
+    res.status(500).json({ msg: 'Server Error fetching project details.' });
+  }
 });
 
 app.delete('/api/projects/:id', authMiddleware, async (req, res) => {
