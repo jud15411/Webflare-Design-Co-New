@@ -34,6 +34,7 @@ function Tasks() {
     // Fetch Tasks, Projects, AND Users
     const [tasksRes, projectsRes, usersRes] = await Promise.all([
       fetch(`${process.env.REACT_APP_API_URL}/api/tasks`, { headers: { 'x-auth-token': token } }),
+      // Corrected environment variable below
       fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
       fetch(`${process.env.REACT_APP_API_URL}/api/users`, { headers: { 'x-auth-token': token } })
     ]);
