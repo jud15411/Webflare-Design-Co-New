@@ -312,6 +312,19 @@ app.get('/api/tasks', authMiddleware, async (req, res) => {
     }
 });
 app.post('/api/tasks', authMiddleware, async (req, res) => res.status(201).json(await new Task(req.body).save()));
+app.put('/api/tasks/:taskId', authMiddleware, async (req, res) => {
+    try {
+        const updatedTask = await Task.findByIdAndUpdate(
+            req.params.taskId, 
+            req.body, 
+            { new: true }
+        );
+        if (!updatedTask) return res.status(404).json({ msg: 'Task not found' });
+        res.json(updatedTask);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
 app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
     try {
         const { status } = req.body;
