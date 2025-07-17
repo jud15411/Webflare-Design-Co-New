@@ -103,10 +103,14 @@ function Tasks() {
   };
 
   const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    // This part handles the Edit Modal
     if (editingTask) {
-        setEditingTask({ ...editingTask, [e.target.name]: e.target.value });
-    } else {
-        setNewTask({ ...newTask, [e.target.name]: e.target.value });
+        setEditingTask({ ...editingTask, [name]: value });
+    } 
+    // This else block handles the Add Modal
+    else {
+        setNewTask({ ...newTask, [name]: value });
     }
   };
 
