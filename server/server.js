@@ -1,4 +1,12 @@
-// ... (existing imports) ...
+require('dotenv').config();
+const express = require('express'); // Ensure this line is present and at the top!
+const mongoose = require('mongoose');
+const cors = require('cors');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
@@ -7,6 +15,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const MONGO_URI = process.env.MONGO_URI;
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
+// Define your production URL here, e.g., 'https://www.yourdomain.com'
 const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:${process.env.PORT || 8080}`;
 
 
@@ -24,13 +33,124 @@ const Comment = require('./models/Comment');
 const TimeEntry = require('./models/TimeEntry');
 const Notification = require('./models/Notification');
 const Counter = require('./models/Counter');
+const Milestone = require('./models/Milestone'); // Ensure Milestone model is imported
 const File = require('./models/File');
-const Milestone = require('./models/Milestone'); // NEW: Import Milestone model
+
+// --- Middleware ---
+app.use(cors());
+app.use(express.json());
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
+// --- Multer Config ---
+const projectImageStorage = multer.diskStorage({
+  destination: './public/uploads/',
+  filename: (req, file, cb) => {
+    cb(null, 'projectImage-' + Date.now() + path.extname(file.originalname));
+  }
+});
+const uploadProjectImage = multer({ storage: projectImageStorage }).single('projectImage');
+
+const projectFileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = `public/project_files/${req.params.projectId}`;
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  }
+});
+const uploadProjectFile = multer({ storage: projectFileStorage }).single('projectFile');
 
 
-// ... (existing middleware and auth functions) ...
+// --- DB Connection ---
+mongoose.connect(MONGO_URI).then(() => console.log("MongoDB Connected!")).catch(err => console.error(err));
 
-// Helper function to send verification email (retained)
+// --- AUTHENTICATION & PERMISSIONS MIDDLEWARE ---
+const authMiddleware = (req, res, next) => {
+    const token = req.header('x-auth-token');
+    if (!token) return res.status(401).json({ msg: 'No token, authorization denied' });
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.userId = decoded.id;
+        req.userRole = decoded.role;
+        // Optionally pass clientId from token if available (for client users)
+        req.userClientId = decoded.clientId || null;
+        next();
+    } catch (err) {
+        res.status(401).json({ msg: 'Token is not valid' });
+    }
+};
+
+const adminOnlyMiddleware = (req, res, next) => {
+    const userRole = req.userRole ? req.userRole.trim().toUpperCase() : '';
+    if (!['CEO', 'CTO', 'SALES'].includes(userRole)) {
+        return res.status(403).json({ msg: 'Access denied. Admin privileges required.' });
+    }
+    next();
+};
+
+const ceoOnlyMiddleware = (req, res, next) => {
+    const userRole = req.userRole ? req.userRole.trim().toUpperCase() : '';
+    if (userRole !== 'CEO') {
+        return res.status(403).json({ msg: 'Access denied. CEO privileges required.' });
+    }
+    next();
+};
+
+const clientOnlyMiddleware = (req, res, next) => {
+    const userRole = req.userRole ? req.userRole.trim().toUpperCase() : '';
+    if (userRole !== 'CLIENT') {
+        return res.status(403).json({ msg: 'Access denied. Client privileges required.' });
+    }
+    next();
+};
+
+const ownerOrAdminMiddleware = async (req, res, next) => {
+    try {
+        const userRole = req.userRole ? req.userRole.trim().toUpperCase() : '';
+        // If an admin role, grant access
+        if (['CEO', 'CTO', 'SALES'].includes(userRole)) {
+            return next();
+        }
+
+        // If client, check ownership
+        if (userRole === 'CLIENT') {
+            const userId = req.userId;
+            const user = await User.findById(userId); // Fetch user to get clientId
+            if (!user || !user.clientId) {
+                return res.status(403).json({ msg: 'Access denied. Client not properly associated.' });
+            }
+
+            // For project-specific routes (e.g., /api/client/projects/:projectId)
+            if (req.params.projectId) {
+                const project = await Project.findById(req.params.projectId);
+                if (!project || project.clientId.toString() !== user.clientId._id.toString()) {
+                    return res.status(403).json({ msg: 'Access denied. You do not have permission to view this project.' });
+                }
+            }
+            // For milestone-specific routes (e.g., /api/client/milestones/:milestoneId/suggest)
+            if (req.params.milestoneId) {
+                const milestone = await Milestone.findById(req.params.milestoneId).populate('projectId');
+                 if (!milestone || !milestone.projectId || milestone.projectId.clientId.toString() !== user.clientId._id.toString()) {
+                    return res.status(403).json({ msg: 'Access denied. This milestone does not belong to your company\'s projects.' });
+                }
+            }
+            // Add more specific checks for other client-accessible resources (e.g., files, comments)
+            // Ensure any resource accessed by a client is checked against their clientId
+
+            return next();
+        }
+
+        // If not authenticated or not a recognized role with permission
+        return res.status(403).json({ msg: 'Access denied. Insufficient privileges.' });
+    } catch (err) {
+        console.error('Owner or Admin Middleware Error:', err);
+        res.status(500).send('Server error during authorization.');
+    }
+};
+
+// Helper function to send verification email
 const sendVerificationEmail = async (user) => {
     const transporter = nodemailer.createTransport({
         service: 'gmail',
@@ -40,7 +160,8 @@ const sendVerificationEmail = async (user) => {
         }
     });
 
-    const verificationLink = `${CLIENT_URL}/api/auth/verify-email?token=${user.emailVerificationToken}`;
+    // Ensure CLIENT_URL is defined and correctly points to your frontend domain
+    const verificationLink = `${CLIENT_URL}/login?verificationStatus=success&email=${encodeURIComponent(user.email)}`;
 
     const mailOptions = {
         from: EMAIL_USER,
@@ -66,57 +187,6 @@ const sendVerificationEmail = async (user) => {
     }
 };
 
-// --- NEW AUTHORIZATION MIDDLEWARE FOR CLIENTS ---
-const clientOnlyMiddleware = (req, res, next) => {
-    const userRole = req.userRole ? req.userRole.trim().toUpperCase() : '';
-    if (userRole !== 'CLIENT') {
-        return res.status(403).json({ msg: 'Access denied. Client privileges required.' });
-    }
-    next();
-};
-
-const ownerOrAdminMiddleware = async (req, res, next) => {
-    try {
-        const userRole = req.userRole ? req.userRole.trim().toUpperCase() : '';
-        if (userRole === 'CEO' || userRole === 'CTO' || userRole === 'SALES') {
-            return next(); // Admin roles can view anything
-        }
-
-        if (userRole === 'CLIENT') {
-            // Check if the client is associated with the project/resource they are trying to access
-            const userId = req.userId;
-            const user = await User.findById(userId).populate('clientId');
-            if (!user || !user.clientId) {
-                return res.status(403).json({ msg: 'Access denied. Client not properly associated.' });
-            }
-
-            let resourceId; // This needs to be dynamically set based on the route
-            if (req.params.projectId) {
-                resourceId = req.params.projectId;
-                const project = await Project.findById(resourceId);
-                if (!project || project.clientId.toString() !== user.clientId._id.toString()) {
-                    return res.status(403).json({ msg: 'Access denied. You do not have permission to view this project.' });
-                }
-            } else if (req.params.invoiceId) { // Example for invoice ownership
-                 resourceId = req.params.invoiceId;
-                 const invoice = await Invoice.findById(resourceId).populate({ path: 'projectId', select: 'clientId' });
-                 if (!invoice || !invoice.projectId || invoice.projectId.clientId.toString() !== user.clientId._id.toString()) {
-                    return res.status(403).json({ msg: 'Access denied. You do not have permission to view this invoice.' });
-                 }
-            }
-            // Add more resource checks (tasks, comments etc.) as needed
-            // For now, if no specific resource ID is being checked, assume general client project access
-            
-            return next();
-        }
-
-        return res.status(403).json({ msg: 'Access denied. Insufficient privileges.' });
-    } catch (err) {
-        console.error('Owner or Admin Middleware Error:', err);
-        res.status(500).send('Server error during authorization.');
-    }
-};
-
 
 // --- API ROUTES ---
 
@@ -124,7 +194,8 @@ const ownerOrAdminMiddleware = async (req, res, next) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await User.findOne({ email }).populate('clientId'); // Populate client details on login
+        // Populate clientId for client users to include it in the token payload
+        const user = await User.findOne({ email }).populate('clientId', 'name'); // Select only name from Client
         if (!user) return res.status(400).json({ msg: 'Invalid credentials' });
         
         // Check if email is verified
@@ -135,24 +206,41 @@ app.post('/api/auth/login', async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
         
-        const payload = { id: user.id, role: user.role, clientId: user.clientId ? user.clientId._id : null }; // Include clientId in token if exists
+        // Include clientId in the JWT payload if the user has a client role
+        const payload = { 
+            id: user.id, 
+            role: user.role, 
+            clientId: user.role === 'Client' && user.clientId ? user.clientId._id : null 
+        };
         jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
             if (err) throw err;
-            res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, clientId: user.clientId } }); // Return user info and client details
+            // Return selected user info including client name if applicable
+            res.json({ 
+                token, 
+                user: { 
+                    id: user.id, 
+                    name: user.name, 
+                    email: user.email, 
+                    role: user.role, 
+                    // If client user, include client company name
+                    clientCompany: user.clientId ? { _id: user.clientId._id, name: user.clientId.name } : null
+                } 
+            });
         });
     } catch (err) { res.status(500).send('Server error'); }
 });
 
 app.get('/api/auth/user', authMiddleware, async (req, res) => {
     try {
-        const user = await User.findById(req.userId).select('-password').populate('clientId'); // Populate clientId
+        // Populate clientId for client users to send client company name to frontend
+        const user = await User.findById(req.userId).select('-password').populate('clientId', 'name');
         res.json(user);
     } catch (err) { res.status(500).send('Server error'); }
 });
 
 app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
     try {
-        const { name, email, password, role, clientId } = req.body; // Added clientId to registration
+        const { name, email, password, role, clientId } = req.body; // clientId can be provided for client users
         
         if (role === 'CEO' || role === 'CTO') {
             const existingRoleHolder = await User.findOne({ role: role });
@@ -164,6 +252,7 @@ app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, re
         let user = await User.findOne({ email });
         if (user) return res.status(400).json({ msg: 'User already exists' });
         
+        // Validate clientId if role is 'Client'
         if (role === 'Client' && !clientId) {
             return res.status(400).json({ msg: 'Client users must be assigned to a Client company.' });
         }
@@ -171,10 +260,17 @@ app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, re
              return res.status(400).json({ msg: 'Invalid Client ID provided.' });
         }
 
-
         const emailVerificationToken = crypto.randomBytes(20).toString('hex');
 
-        user = new User({ name, email, password, role, emailVerificationToken, clientId: role === 'Client' ? clientId : undefined }); // Assign clientId if role is client
+        // Assign clientId to user if their role is 'Client'
+        user = new User({ 
+            name, 
+            email, 
+            password, 
+            role, 
+            emailVerificationToken, 
+            clientId: role === 'Client' ? clientId : undefined 
+        });
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(password, salt);
         await user.save();
@@ -220,7 +316,7 @@ app.post('/api/auth/resend-verification', async (req, res) => {
 });
 
 
-// Email verification route (retained)
+// Email verification route (Updated to redirect and for better error logging during save)
 app.get('/api/auth/verify-email', async (req, res) => {
     try {
         const { token } = req.query;
@@ -233,7 +329,7 @@ app.get('/api/auth/verify-email', async (req, res) => {
         try {
             user.isEmailVerified = true;
             user.emailVerificationToken = undefined; // Clear the token after verification
-            await user.save();
+            await user.save(); // THIS IS THE CRITICAL SAVE OPERATION
             console.log(`User ${user.email} successfully verified!`);
         } catch (saveErr) {
             console.error('Mongoose save error during email verification:', saveErr);
@@ -387,7 +483,10 @@ app.delete('/api/projects/:id', authMiddleware, async (req, res) => {
     try {
         const project = await Project.findByIdAndDelete(req.params.id);
         if (!project) return res.status(404).json({ msg: 'Project not found' });
-        if (project.imageUrl) fs.unlink(path.join(__dirname, project.imageUrl), (err) => { if (err) console.error("Error deleting image file:", err); });
+        // Also delete associated milestones, tasks, files when a project is deleted
+        await Milestone.deleteMany({ projectId: req.params.id });
+        await Task.deleteMany({ projectId: req.params.id });
+        await File.deleteMany({ projectId: req.params.id }); // Assuming files are also tied to project
         res.json({ msg: 'Project removed' });
     } catch (err) { res.status(500).send('Server Error'); }
 });
@@ -407,7 +506,7 @@ app.put('/api/projects/:id/toggle-feature', authMiddleware, async (req, res) => 
 });
 
 
-// == MILESTONES == (NEW SECTION)
+// == MILESTONES ==
 app.post('/api/milestones', authMiddleware, adminOnlyMiddleware, async (req, res) => {
     try {
         const { name, description, projectId, dueDate, status } = req.body;
@@ -449,7 +548,9 @@ app.delete('/api/milestones/:id', authMiddleware, adminOnlyMiddleware, async (re
     }
 });
 
-// == CLIENT PORTAL API ROUTES == (NEW SECTION)
+
+// == CLIENT PORTAL API ROUTES ==
+// Get projects for the authenticated client, populated with milestones and tasks
 app.get('/api/client/projects', authMiddleware, clientOnlyMiddleware, async (req, res) => {
     try {
         const user = await User.findById(req.userId);
@@ -457,32 +558,22 @@ app.get('/api/client/projects', authMiddleware, clientOnlyMiddleware, async (req
             return res.status(403).json({ msg: 'Client user not properly associated with a client company.' });
         }
 
+        // Fetch projects belonging to the client's company
         const clientProjects = await Project.find({ clientId: user.clientId })
             .populate('clientId', 'name') // Populate client company name
-            .populate({ // Populate milestones and tasks within those milestones
-                path: 'milestones',
-                model: 'Milestone',
-                populate: {
-                    path: 'tasks', // Assuming tasks are linked to milestones
-                    model: 'Task',
-                    populate: {
-                        path: 'assignedTo',
-                        model: 'User',
-                        select: 'name'
-                    }
-                }
-            })
             .sort({ createdAt: -1 });
 
-        // Transform project data to include tasks directly if needed, or filter milestones/tasks
-        const projectsWithFormattedMilestones = clientProjects.map(project => {
-            const milestonesWithTasks = project.milestones.map(milestone => {
-                // Filter tasks that belong to this specific milestone
-                const milestoneTasks = project.tasks.filter(task => task.milestoneId && task.milestoneId.equals(milestone._id));
+        // For each project, fetch its milestones and their tasks separately
+        const projectsWithDetails = await Promise.all(clientProjects.map(async (project) => {
+            const milestones = await Milestone.find({ projectId: project._id }).sort({ dueDate: 1 });
+            const tasks = await Task.find({ projectId: project._id }).populate('assignedTo', 'name'); // Fetch all tasks for the project and populate assignee name
 
+            // Map tasks to their respective milestones
+            const milestonesWithTasks = milestones.map(milestone => {
+                const tasksForMilestone = tasks.filter(task => task.milestoneId && task.milestoneId.equals(milestone._id));
                 return {
                     ...milestone.toObject(),
-                    tasks: milestoneTasks
+                    tasks: tasksForMilestone // Attach filtered tasks to the milestone
                 };
             });
 
@@ -490,9 +581,9 @@ app.get('/api/client/projects', authMiddleware, clientOnlyMiddleware, async (req
                 ...project.toObject(),
                 milestones: milestonesWithTasks
             };
-        });
+        }));
 
-        res.json(projectsWithFormattedMilestones);
+        res.json(projectsWithDetails);
     } catch (err) {
         console.error('Error fetching client projects:', err);
         res.status(500).send('Server error fetching client projects.');
@@ -522,15 +613,15 @@ app.put('/api/client/milestones/:milestoneId/suggest', authMiddleware, clientOnl
         }
         
         milestone.clientSuggestions = suggestion;
-        milestone.lastSuggestedBy = userId;
+        milestone.lastSuggestedBy = userId; // Store the user ID of the client who made the suggestion
         milestone.lastSuggestionDate = new Date();
         await milestone.save();
 
         // Notify relevant internal users (CEO, project manager, assigned dev etc.)
+        // This is a basic example, you might want more sophisticated notification logic
         const projectCreator = await User.findById(milestone.projectId.creator); // Assuming project has a creator field
         const message = `${user.name} (Client) added a suggestion to milestone "${milestone.name}" on project "${milestone.projectId.title}".`;
         
-        // Notify CEO and Project Creator
         const ceo = await User.findOne({ role: 'CEO' });
         if (ceo && ceo._id.toString() !== userId.toString()) {
              new Notification({ recipient: ceo._id, message, link: `/projects/${milestone.projectId._id}` }).save();
@@ -549,7 +640,7 @@ app.put('/api/client/milestones/:milestoneId/suggest', authMiddleware, clientOnl
 
 
 // == FILES, COMMENTS, ETC. ==
-app.get('/api/projects/:projectId/files', authMiddleware, ownerOrAdminMiddleware, async (req, res) => { // Added ownerOrAdminMiddleware
+app.get('/api/projects/:projectId/files', authMiddleware, ownerOrAdminMiddleware, async (req, res) => {
     try {
         const files = await File.find({ projectId: req.params.projectId }).sort({ createdAt: 'desc' });
         res.json(files);
@@ -558,7 +649,7 @@ app.get('/api/projects/:projectId/files', authMiddleware, ownerOrAdminMiddleware
     }
 });
 
-app.post('/api/projects/:projectId/files', authMiddleware, adminOnlyMiddleware, async (req, res) => { // Admin only for adding files for now
+app.post('/api/projects/:projectId/files', authMiddleware, adminOnlyMiddleware, (req, res) => { // Admin only for adding files for now
     uploadProjectFile(req, res, async (err) => {
         if (err) {
             return res.status(500).json({ msg: "File upload failed", error: err.message });
@@ -584,7 +675,7 @@ app.post('/api/projects/:projectId/files', authMiddleware, adminOnlyMiddleware, 
     });
 });
 
-app.get('/api/projects/:projectId/comments', authMiddleware, ownerOrAdminMiddleware, async (req, res) => { // Added ownerOrAdminMiddleware
+app.get('/api/projects/:projectId/comments', authMiddleware, ownerOrAdminMiddleware, async (req, res) => {
     try {
         const comments = await Comment.find({ project: req.params.projectId }).sort({ createdAt: 'desc' }).populate('author', 'name');
         res.json(comments);
