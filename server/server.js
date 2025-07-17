@@ -240,25 +240,51 @@ app.post('/api/contracts', authMiddleware, adminOnlyMiddleware, async (req, res)
 });
 
 
-// ... (The rest of your server.js routes remain unchanged)
 // == DASHBOARD & PUBLIC ROUTES ==
 app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
     try {
-        const [activeProjectsResult, pendingTasksResult, unpaidInvoicesResult, recentProjectsResult] = await Promise.allSettled([
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // Fetch all stats in parallel
+        const [
+            activeProjects,
+            pendingTasks,
+            unpaidInvoicesResult,
+            recentProjects,
+            timeEntriesToday
+        ] = await Promise.all([
             Project.countDocuments({ status: { $nin: ['Completed', 'Cancelled'] } }),
             Task.countDocuments({ status: { $ne: 'Done' } }),
             Invoice.aggregate([{ $match: { status: { $ne: 'Paid' } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
-            Project.find().sort({ _id: -1 }).limit(5).populate('clientId')
+            Project.find().sort({ createdAt: -1 }).limit(5).populate('clientId', 'name'),
+            TimeEntry.aggregate([
+                { $match: { 
+                    user: new mongoose.Types.ObjectId(req.userId), // Find entries for the logged-in user
+                    createdAt: { $gte: today, $lt: tomorrow } // Find entries created today
+                }},
+                { $group: { _id: null, total: { $sum: '$hours' } } }
+            ])
         ]);
-        const activeProjects = activeProjectsResult.status === 'fulfilled' ? activeProjectsResult.value : 0;
-        const pendingTasks = pendingTasksResult.status === 'fulfilled' ? pendingTasksResult.value : 0;
-        const recentProjects = recentProjectsResult.status === 'fulfilled' ? recentProjectsResult.value : [];
-        let invoicesDue = 0;
-        if (unpaidInvoicesResult.status === 'fulfilled' && unpaidInvoicesResult.value.length > 0) {
-            invoicesDue = unpaidInvoicesResult.value[0].total;
-        }
-        res.json({ activeProjects, pendingTasks, invoicesDue, recentProjects });
-    } catch (err) { res.status(500).send('Server Error'); }
+
+        const invoicesDue = unpaidInvoicesResult.length > 0 ? unpaidInvoicesResult[0].total : 0;
+        const hoursToday = timeEntriesToday.length > 0 ? timeEntriesToday[0].total : 0;
+        
+        res.json({ 
+            activeProjects, 
+            pendingTasks, 
+            invoicesDue, 
+            recentProjects,
+            hoursToday // Send the new stat to the frontend
+        });
+
+    } catch (err) { 
+        console.error("Dashboard Stats Error:", err);
+        res.status(500).send('Server Error'); 
+    }
 });
 app.get('/api/featured-projects', async (req, res) => {
     try {

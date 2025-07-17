@@ -4,7 +4,7 @@ import './Dashboard.css';
 import './Shared.css';
 
 function Dashboard() {
-  const [stats, setStats] = useState({ activeProjects: 0, pendingTasks: 0, invoicesDue: 0 });
+  const [stats, setStats] = useState({ activeProjects: 0, pendingTasks: 0, invoicesDue: 0, hoursToday: 0 });
   const [recentProjects, setRecentProjects] = useState([]);
   const [myTasks, setMyTasks] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -30,22 +30,28 @@ function Dashboard() {
       const userData = await userRes.json();
       const allTasks = await tasksRes.json();
 
-      // Set stats and recent projects from the stats endpoint
+      // Set stats, now including hours logged today
       setStats({
         activeProjects: statsData.activeProjects,
         pendingTasks: statsData.pendingTasks,
         invoicesDue: statsData.invoicesDue,
+        hoursToday: statsData.hoursToday || 0, // Add new stat
       });
       setRecentProjects(statsData.recentProjects);
       
-      // Set the current user
       setCurrentUser(userData);
 
-      // Filter tasks to find open tasks assigned to the current user
+      // Filter tasks for the current user that are not done
       const userOpenTasks = allTasks.filter(task => 
         task.assignedTo?._id === userData._id && task.status !== 'Done'
       );
-      setMyTasks(userOpenTasks);
+      
+      // Sort tasks by creation date (newest first) and take the top 5
+      const recentUserTasks = userOpenTasks
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
+
+      setMyTasks(recentUserTasks);
 
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -96,8 +102,8 @@ function Dashboard() {
           <p className="stat-number">${stats.invoicesDue.toLocaleString()}</p>
         </div>
         <div className="card">
-          <h4>Revenue (YTD)</h4>
-          <p className="stat-number text-placeholder">--</p>
+          <h4>Hours Logged Today</h4>
+          <p className="stat-number">{stats.hoursToday.toFixed(1)}</p>
         </div>
       </div>
 
@@ -133,7 +139,7 @@ function Dashboard() {
         </div>
 
         <div className="my-tasks-container">
-            <h2 className="table-title">My Open Tasks</h2>
+            <h2 className="table-title">My 5 Most Recent Tasks</h2>
             <div className="tasks-list">
                 {myTasks.length > 0 ? (
                     myTasks.map(task => (
