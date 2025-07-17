@@ -106,7 +106,7 @@ const sendVerificationEmail = async (user) => {
         }
     });
 
-    const verificationLink = `${CLIENT_URL}/api/auth/verify-email?token=${user.emailVerificationToken}`;
+    const verificationLink = `${CLIENT_URL}/api/auth/verify-email?token=${user.emailVerificationToken}`; // Use CLIENT_URL here
 
     const mailOptions = {
         from: EMAIL_USER,
@@ -144,6 +144,7 @@ app.post('/api/auth/login', async (req, res) => {
         
         // Check if email is verified
         if (!user.isEmailVerified) {
+            // Updated response to indicate unverified email for frontend action
             return res.status(401).json({ msg: 'Please verify your email to log in.', errorCode: 'EMAIL_NOT_VERIFIED', email: user.email });
         }
 
@@ -186,7 +187,7 @@ app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, re
         user.password = await bcrypt.hash(password, salt);
         await user.save();
         
-        await sendVerificationEmail(user);
+        await sendVerificationEmail(user); // Call the helper function
 
         const ceo = await User.findOne({ role: 'CEO' });
         const creator = await User.findById(req.userId);
@@ -217,7 +218,7 @@ app.post('/api/auth/resend-verification', async (req, res) => {
         user.emailVerificationToken = newEmailVerificationToken;
         await user.save();
 
-        await sendVerificationEmail(user);
+        await sendVerificationEmail(user); // Resend the email
 
         res.json({ msg: 'New verification email sent successfully!' });
     } catch (err) {
@@ -335,7 +336,7 @@ app.post('/api/projects', authMiddleware, (req, res) => {
             const ceo = await User.findOne({ role: 'CEO' });
             if (ceo) {
                 const creator = await User.findById(req.userId);
-                const message = `${creator.name} created a new project: "${newProject.title}".`;
+                const message = `${creator.name} registered a new user: ${newProject.title}.`;
                 new Notification({ recipient: ceo._id, message, link: `/projects` }).save();
             }
             res.status(201).json(newProject);
@@ -441,8 +442,7 @@ app.post('/api/projects/:projectId/comments', authMiddleware, async (req, res) =
         allUsers.forEach(user => { new Notification({ recipient: user._id, message, link: `/projects/${project._id}` }).save(); });
         const populatedComment = await Comment.findById(newComment._id).populate('author', 'name');
         res.status(201).json(populatedComment);
-    }
-    catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) { res.status(500).send('Server Error'); }
 });
 
 
@@ -506,7 +506,7 @@ app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
 app.post('/api/tasks/:taskId/time', authMiddleware, async (req, res) => {
     try {
         const { hours, description } = req.body;
-        const task = await Task.findById(req.params.taskId); // Corrected: was task.projectId
+        const task = await Task.findById(req.params.taskId);
         if (!task) return res.status(404).json({ msg: 'Task not found' });
         const newTimeEntry = new TimeEntry({ hours, description, user: req.userId, task: req.params.taskId, project: task.projectId });
         await newTimeEntry.save();
