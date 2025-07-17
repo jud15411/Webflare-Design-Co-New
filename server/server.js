@@ -648,6 +648,34 @@ app.get('/api/projects/:projectId/files', authMiddleware, ownerOrAdminMiddleware
         res.status(500).send('Server Error');
     }
 });
+app.get('/api/projects/:id', authMiddleware, async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id)
+            .populate('clientId', 'name') // Populate client name
+            .populate({ // Populate milestones for the project detail view
+                path: 'milestones',
+                model: 'Milestone',
+                populate: { // Optionally populate tasks and assignees within milestones
+                    path: 'tasks',
+                    model: 'Task',
+                    populate: {
+                        path: 'assignedTo',
+                        model: 'User',
+                        select: 'name'
+                    }
+                }
+            });
+
+        if (!project) {
+            return res.status(404).json({ msg: 'Project not found.' });
+        }
+        res.json(project);
+    } catch (err) {
+        console.error('Error fetching single project:', err);
+        res.status(500).send('Server Error fetching project details.');
+    }
+});
+
 
 app.post('/api/projects/:projectId/files', authMiddleware, adminOnlyMiddleware, (req, res) => { // Admin only for adding files for now
     uploadProjectFile(req, res, async (err) => {
