@@ -486,16 +486,15 @@ app.post('/api/projects', authMiddleware, (req, res) => {
 
 app.get('/api/projects/:id', authMiddleware, async (req, res) => {
   try {
-    const { projectId } = req.params;
+    const { id } = req.params; // CORRECT: Use 'id' to match the route '/:id'
 
     // A crucial check to prevent Mongoose errors with invalid IDs
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ msg: 'Invalid Project ID format.' });
     }
 
-    // Fetch ONLY the project and its client.
-    // This removes the 'populate' for milestones, which was the source of the crash.
-    const project = await Project.findById(projectId).populate('clientId', 'name');
+    // Fetch the project and its client.
+    const project = await Project.findById(id).populate('clientId', 'name');
 
     if (!project) {
       return res.status(404).json({ msg: 'Project not found.' });
