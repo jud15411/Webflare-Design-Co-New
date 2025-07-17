@@ -301,7 +301,16 @@ app.put('/api/clients/:id', authMiddleware, adminOnlyMiddleware, async (req, res
 app.delete('/api/clients/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Client.findByIdAndDelete(req.params.id)));
 
 // TASKS
-app.get('/api/tasks', authMiddleware, async (req, res) => res.json(await Task.find().populate({ path: 'projectId', select: 'title' })));
+app.get('/api/tasks', authMiddleware, async (req, res) => {
+    try {
+        const tasks = await Task.find()
+            .populate({ path: 'projectId', select: 'title' })
+            .populate({ path: 'assignedTo', select: 'name' }); // <-- Add this line to get the assignee's name
+        res.json(tasks);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
 app.post('/api/tasks', authMiddleware, async (req, res) => res.status(201).json(await new Task(req.body).save()));
 app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
     try {

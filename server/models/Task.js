@@ -8,6 +8,10 @@ const TaskSchema = new mongoose.Schema({
     enum: ['To Do', 'In Progress', 'On Hold', 'Done'],
     default: 'To Do' // This automatically sets the status for new tasks
   },
+  assignedTo: { // <-- Add this new field
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   dueDate: Date,
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true }
 });
