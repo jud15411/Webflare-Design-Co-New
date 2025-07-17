@@ -17,12 +17,17 @@ const UserSchema = new mongoose.Schema({
   },
   role: { 
     type: String,
-    enum: ['CEO', 'CTO', 'Developer', 'Sales'],
+    enum: ['CEO', 'CTO', 'Developer', 'Sales', 'Client'], // Added 'Client' role
     default: 'Developer',
     required: true
   },
-  emailVerificationToken: String, // Add this line
-  isEmailVerified: { type: Boolean, default: false } // Add this line
+  emailVerificationToken: String,
+  isEmailVerified: { type: Boolean, default: false },
+  clientId: { // New field to link a client user to a client company
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client', // References the 'Client' model
+    required: function() { return this.role === 'Client'; } // Required only if role is 'Client'
+  }
 });
 
 module.exports = mongoose.model('User', UserSchema);

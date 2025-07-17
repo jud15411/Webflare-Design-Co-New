@@ -1,0 +1,45 @@
+/* client-portal/src/components/ClientNavbar.css */
+
+.client-navbar {
+  background-color: #333;
+  padding: 15px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.navbar-brand a {
+  color: #007bff;
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.navbar-links span {
+  margin-right: 20px;
+  color: #f0f0f0;
+}
+
+.navbar-links a {
+  color: #f0f0f0;
+  text-decoration: none;
+  margin-right: 20px;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.navbar-links a:hover {
+  color: #007bff;
+}
+
+.navbar-links .logout-button {
+  background-color: #dc3545; /* Red logout button */
+  padding: 8px 15px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+}
+
+.navbar-links .logout-button:hover {
+  background-color: #c82333;
+}

@@ -1,0 +1,79 @@
+/* client-portal/src/pages/ClientLogin.css */
+
+.client-login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 60px); /* Adjust based on navbar height */
+  background-color: #1a1a1a;
+  padding: 20px;
+}
+
+.client-login-box {
+  background: #2a2a2a; /* Darker background than backdrop */
+  border-radius: 10px;
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.client-login-logo {
+  max-width: 120px;
+  margin-bottom: 25px;
+}
+
+.client-login-box h2 {
+  color: #f0f0f0;
+  margin-bottom: 30px;
+  font-size: 1.8rem;
+}
+
+.client-login-box .input-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.client-login-box .input-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #a0a0a0;
+  font-size: 0.9em;
+}
+
+.client-login-box .input-group input {
+  width: calc(100% - 22px); /* Account for padding+border */
+  padding: 11px;
+  background-color: #333;
+  border: 1px solid #444;
+  border-radius: 5px;
+  color: #f0f0f0;
+  font-size: 1rem;
+}
+
+.client-login-box .input-group input:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+.client-login-box .login-button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 20px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.client-login-box .login-button:hover {
+  background-color: #0056b3;
+}
+
+/* Reusing general message styles from index.css */
+/* .message-banner.success, .message-banner.error can be used directly */

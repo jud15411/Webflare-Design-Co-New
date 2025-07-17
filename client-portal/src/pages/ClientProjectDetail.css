@@ -1,0 +1,59 @@
+/* client-portal/src/pages/ClientProjectDetail.css */
+
+.client-project-detail {
+  padding: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.client-project-detail .page-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.client-project-detail .page-title {
+  color: #007bff;
+  font-size: 2.8rem;
+  margin-bottom: 10px;
+}
+
+.project-detail-status {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.project-detail-client {
+  font-size: 1rem;
+  color: #aaa;
+  margin-bottom: 20px;
+}
+
+.project-description {
+  background-color: #2a2a2a;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  line-height: 1.6;
+  color: #ccc;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.milestones-section {
+  margin-top: 40px;
+}
+
+.milestones-section h2 {
+  color: #f0f0f0;
+  font-size: 2rem;
+  margin-bottom: 25px;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 10px;
+}
+
+/* Reusing project status colors from dashboard.css */
+.project-status.not-started { background-color: #6c757d; } /* Gray */
+.project-status.in-progress { background-color: #007bff; } /* Blue */
+.project-status.completed { background-color: #28a745; } /* Green */
+.project-status.on-hold { background-color: #ffc107; color: #333; } /* Yellow */
+.project-status.canceled { background-color: #dc3545; } /* Red */

@@ -1,0 +1,141 @@
+/* client-portal/src/components/MilestoneCard.css */
+
+.milestone-card {
+  background-color: #2a2a2a;
+  border-radius: 10px;
+  padding: 25px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  border-left: 5px solid; /* For status indicator */
+}
+
+/* Status-based border colors */
+.milestone-card.status-not-started { border-color: #6c757d; } /* Gray */
+.milestone-card.status-in-progress { border-color: #007bff; } /* Blue */
+.milestone-card.status-completed { border-color: #28a745; } /* Green */
+.milestone-card.status-on-hold { border-color: #ffc107; } /* Yellow */
+.milestone-card.status-canceled { border-color: #dc3545; } /* Red */
+
+
+.milestone-card h4 {
+  color: #f0f0f0;
+  font-size: 1.5rem;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.milestone-card p {
+  color: #ccc;
+  font-size: 0.95rem;
+  margin-bottom: 5px;
+}
+
+.milestone-description {
+  margin-bottom: 15px;
+  line-height: 1.5;
+}
+
+.milestone-status-badge {
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: white; /* Ensure text is visible on colored background */
+}
+
+/* Specific colors for status badges */
+.milestone-status-badge.status-not-started { background-color: #6c757d; }
+.milestone-status-badge.status-in-progress { background-color: #007bff; }
+.milestone-status-badge.status-completed { background-color: #28a745; }
+.milestone-status-badge.status-on-hold { background-color: #ffc107; color: #333; } /* Special case for yellow */
+.milestone-status-badge.status-canceled { background-color: #dc3545; }
+
+
+.milestone-tasks {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px dashed #444;
+}
+
+.milestone-tasks h5 {
+  color: #f0f0f0;
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.milestone-tasks ul {
+  list-style-type: disc;
+  margin-left: 20px;
+  padding: 0;
+  color: #ccc;
+}
+
+.milestone-tasks li {
+  margin-bottom: 5px;
+}
+
+.client-suggestion-section {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px dashed #444;
+}
+
+.client-suggestion-section h5 {
+  color: #f0f0f0;
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.client-suggestion-section .current-suggestion {
+  background-color: #3a3a3a;
+  border-left: 4px solid #007bff;
+  padding: 10px 15px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  font-style: italic;
+  color: #e0e0e0;
+}
+
+.client-suggestion-section .no-suggestion {
+  color: #aaa;
+  font-style: italic;
+  margin-bottom: 15px;
+}
+
+.toggle-suggestion-form-button,
+.submit-suggestion-button {
+  background-color: #007bff;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  transition: background-color 0.2s ease;
+}
+
+.toggle-suggestion-form-button:hover,
+.submit-suggestion-button:hover {
+  background-color: #0056b3;
+}
+
+.suggestion-form {
+  margin-top: 20px;
+  border-top: 1px solid #444;
+  padding-top: 20px;
+}
+
+.suggestion-form textarea {
+  width: calc(100% - 20px);
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #555;
+  border-radius: 5px;
+  background-color: #333;
+  color: #f0f0f0;
+  font-size: 1rem;
+  resize: vertical; /* Allow vertical resizing */
+}
