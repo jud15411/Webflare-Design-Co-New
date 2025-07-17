@@ -9,6 +9,7 @@ import './Tasks.css';
 const TaskCard = ({ task, onEdit }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task._id });
   const style = { transform: CSS.Transform.toString(transform), transition };
+
   return (
     <div className="task-card" ref={setNodeRef} style={style}>
         <div className="drag-handle" {...attributes} {...listeners}>
@@ -27,6 +28,7 @@ const TaskCard = ({ task, onEdit }) => {
 // Droppable Column Component
 const TaskColumn = ({ id, title, tasks, onEdit }) => {
   const { setNodeRef } = useSortable({ id });
+
   return (
     <div className="task-column">
       <h2>{title} ({tasks.length})</h2>
@@ -100,12 +102,12 @@ function Tasks() {
     }
   };
 
-  const handleAddInputChange = (e) => {
-    setNewTask({ ...newTask, [e.target.name]: e.target.value });
-  };
-  
-  const handleEditInputChange = (e) => {
-    setEditingTask({ ...editingTask, [e.target.name]: e.target.value });
+  const handleInputChange = (e) => {
+    if (editingTask) {
+        setEditingTask({ ...editingTask, [e.target.name]: e.target.value });
+    } else {
+        setNewTask({ ...newTask, [e.target.name]: e.target.value });
+    }
   };
 
   const handleAddTask = async (e) => {
@@ -154,10 +156,10 @@ function Tasks() {
           <div className="modal-content">
             <div className="modal-header"><h2 className="modal-title">Add New Task</h2><button className="close-button" onClick={() => setShowAddModal(false)}>&times;</button></div>
             <form onSubmit={handleAddTask}>
-              <div className="form-group"><label>Task Title</label><input type="text" name="title" onChange={handleAddInputChange} required /></div>
-              <div className="form-group"><label>Assign to Project</label><select name="projectId" onChange={handleAddInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
-              <div className="form-group"><label>Description</label><textarea name="description" rows="3" onChange={handleAddInputChange}></textarea></div>
-              <div className="form-group"><label>Assign To</label><select name="assignedTo" onChange={handleAddInputChange}><option value="">Unassigned</option>{users.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}</select></div>
+              <div className="form-group"><label>Task Title</label><input type="text" name="title" onChange={handleInputChange} required /></div>
+              <div className="form-group"><label>Assign to Project</label><select name="projectId" onChange={handleInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
+              <div className="form-group"><label>Description</label><textarea name="description" rows="3" onChange={handleInputChange}></textarea></div>
+              <div className="form-group"><label>Assign To</label><select name="assignedTo" onChange={handleInputChange}><option value="">Unassigned</option>{users.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}</select></div>
               <button type="submit" className="add-button">Save Task</button>
             </form>
           </div>
@@ -169,11 +171,11 @@ function Tasks() {
           <div className="modal-content">
             <div className="modal-header"><h2 className="modal-title">Edit Task</h2><button className="close-button" onClick={() => setShowEditModal(false)}>&times;</button></div>
             <form onSubmit={handleUpdateTask}>
-              <div className="form-group"><label>Task Title</label><input type="text" name="title" value={editingTask.title} onChange={handleEditInputChange} required /></div>
-              <div className="form-group"><label>Assign to Project</label><select name="projectId" value={editingTask.projectId?._id || editingTask.projectId} onChange={handleEditInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
-              <div className="form-group"><label>Description</label><textarea name="description" rows="3" value={editingTask.description} onChange={handleEditInputChange}></textarea></div>
-              <div className="form-group"><label>Assign To</label><select name="assignedTo" value={editingTask.assignedTo?._id || editingTask.assignedTo} onChange={handleEditInputChange}><option value="">Unassigned</option>{users.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}</select></div>
-              <div className="form-group"><label>Status</label><select name="status" value={editingTask.status} onChange={handleEditInputChange}><option value="To Do">To Do</option><option value="In Progress">In Progress</option><option value="On Hold">On Hold</option><option value="Done">Done</option></select></div>
+              <div className="form-group"><label>Task Title</label><input type="text" name="title" value={editingTask.title} onChange={handleInputChange} required /></div>
+              <div className="form-group"><label>Assign to Project</label><select name="projectId" value={editingTask.projectId?._id || editingTask.projectId} onChange={handleInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
+              <div className="form-group"><label>Description</label><textarea name="description" rows="3" value={editingTask.description} onChange={handleInputChange}></textarea></div>
+              <div className="form-group"><label>Assign To</label><select name="assignedTo" value={editingTask.assignedTo?._id || editingTask.assignedTo} onChange={handleInputChange}><option value="">Unassigned</option>{users.map(user => (<option key={user._id} value={project._id}>{user.name}</option>))}</select></div>
+              <div className="form-group"><label>Status</label><select name="status" value={editingTask.status} onChange={handleInputChange}><option value="To Do">To Do</option><option value="In Progress">In Progress</option><option value="On Hold">On Hold</option><option value="Done">Done</option></select></div>
               <button type="submit" className="add-button">Update Task</button>
             </form>
           </div>
