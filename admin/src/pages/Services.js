@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './Shared.css';
+import './Services.css'; // Import new styles
 
 function Services() {
   const [services, setServices] = useState([]);
@@ -11,7 +12,6 @@ function Services() {
   const token = localStorage.getItem('token');
 
   const fetchServices = useCallback(async () => {
-    // This route is protected, so we need the token
     const response = await fetch(`${process.env.REACT_APP_API_URL}/api/services`, {
       headers: { 'x-auth-token': token }
     });
@@ -77,38 +77,50 @@ function Services() {
         <h1 className="page-title">Manage Services</h1>
         <button className="add-button" onClick={() => setShowAddModal(true)}>+ Add Service</button>
       </div>
-      <div className="data-table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Description</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {services.map(service => (
-              <tr key={service._id}>
-                <td>{service.title}</td>
-                <td>{service.description}</td>
-                <td className="actions-cell">
-                  <button className="edit-button" onClick={() => openEditModal(service)}>Edit</button>
-                  <button className="delete-button" onClick={() => handleDeleteService(service._id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+      <div className="services-container">
+        {services.length > 0 ? (
+          services.map(service => (
+            <div key={service._id} className="service-card">
+              <div className="service-card-content">
+                <h3 className="service-card-title">{service.title}</h3>
+                <p className="service-card-description">{service.description}</p>
+              </div>
+              <div className="service-card-actions">
+                <button className="icon-button" onClick={() => openEditModal(service)}>
+                  <span role="img" aria-label="edit">✏️</span> Edit
+                </button>
+                <button className="icon-button delete-button" onClick={() => handleDeleteService(service._id)}>
+                  <span role="img" aria-label="delete">🗑️</span> Delete
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="empty-state">
+            <h3>No Services Available</h3>
+            <p>Get started by adding a new service to display here.</p>
+            <button className="add-button" onClick={() => setShowAddModal(true)}>+ Add Your First Service</button>
+          </div>
+        )}
       </div>
 
-      {/* Add & Edit Modals */}
       {(showAddModal || (showEditModal && editingService)) && (
         <div className="modal-backdrop">
           <div className="modal-content">
-            <div className="modal-header"><h2 className="modal-title">{showEditModal ? 'Edit Service' : 'Add New Service'}</h2><button className="close-button" onClick={() => { setShowAddModal(false); setShowEditModal(false); }}>&times;</button></div>
+            <div className="modal-header">
+                <h2 className="modal-title">{showEditModal ? 'Edit Service' : 'Add New Service'}</h2>
+                <button className="close-button" onClick={() => { setShowAddModal(false); setShowEditModal(false); }}>&times;</button>
+            </div>
             <form onSubmit={showEditModal ? handleUpdateService : handleAddService}>
-              <div className="form-group"><label>Service Title</label><input type="text" name="title" value={showEditModal ? editingService.title : newService.title} onChange={handleInputChange} required /></div>
-              <div className="form-group"><label>Description</label><textarea name="description" rows="4" value={showEditModal ? editingService.description : newService.description} onChange={handleInputChange} required></textarea></div>
+              <div className="form-group">
+                <label>Service Title</label>
+                <input type="text" name="title" value={showEditModal ? editingService.title : newService.title} onChange={handleInputChange} required />
+              </div>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea name="description" rows="4" value={showEditModal ? editingService.description : newService.description} onChange={handleInputChange} required></textarea>
+              </div>
               <button type="submit" className="add-button">{showEditModal ? 'Update Service' : 'Save Service'}</button>
             </form>
           </div>
