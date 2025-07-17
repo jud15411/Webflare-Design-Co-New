@@ -60,20 +60,36 @@ function Tasks() {
     setIsLoading(true);
     setError('');
     try {
-        const [tasksRes, projectsRes, usersRes] = await Promise.all([
+        // Fetch all necessary data in parallel, including the current user's info
+        const [tasksRes, projectsRes, usersRes, currentUserRes] = await Promise.all([
             fetch(`${process.env.REACT_APP_API_URL}/api/tasks`, { headers: { 'x-auth-token': token } }),
             fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
-            fetch(`${process.env.REACT_APP_API_URL}/api/users`, { headers: { 'x-auth-token': token } })
+            fetch(`${process.env.REACT_APP_API_URL}/api/users`, { headers: { 'x-auth-token': token } }),
+            fetch(`${process.env.REACT_APP_API_URL}/api/auth/user`, { headers: { 'x-auth-token': token } })
         ]);
-        if (!tasksRes.ok || !projectsRes.ok || !usersRes.ok) {
+
+        if (!tasksRes.ok || !projectsRes.ok || !usersRes.ok || !currentUserRes.ok) {
             throw new Error('A network error occurred while fetching data.');
         }
+
         const tasksData = await tasksRes.json();
         const projectsData = await projectsRes.json();
         const usersData = await usersRes.json();
-        setTasks(tasksData);
+        const currentUserData = await currentUserRes.json();
+
+        // **Apply filtering based on the user's role**
+        if (currentUserData.role === 'CEO') {
+            // CEOs can see all tasks
+            setTasks(tasksData);
+        } else {
+            // Other users see only tasks assigned to them
+            const myTasks = tasksData.filter(task => task.assignedTo?._id === currentUserData._id);
+            setTasks(myTasks);
+        }
+
         setProjects(projectsData);
         setUsers(usersData);
+
     } catch (err) {
         console.error("Failed to fetch data:", err);
         setError(err.message);
