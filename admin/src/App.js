@@ -17,6 +17,30 @@ import Users from './pages/Users';
 import Services from './pages/Services';
 import Reports from './pages/Reports';
 
+// A new component for the main, authenticated layout
+const AppLayout = ({ user, onLogout }) => (
+  <div className="app-layout">
+    <Sidebar user={user} onLogout={onLogout} />
+    <main className="main-content">
+      {/* All protected routes are nested here */}
+      <Routes>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/clients" element={<Clients />} />
+        <Route path="/invoices" element={<Invoices />} />
+        <Route path="/contracts" element={<Contracts />} />
+        <Route path="/services" element={<Services />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/users" element={<Users />} />
+        <Route path="/settings" element={<Settings />} />
+        {/* Redirect any other nested path to the dashboard */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </main>
+  </div>
+);
+
 function App() {
   const [user, setUser] = useState(null);
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
@@ -25,12 +49,9 @@ function App() {
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        // Ensure token is not expired, etc. before decoding
-        const decodedUser = jwtDecode(token);
-        setUser(decodedUser);
+        setUser(jwtDecode(token));
       }
     } catch (error) {
-      // If token is invalid or expired, remove it
       localStorage.removeItem('token');
     } finally {
       setIsAuthLoaded(true);
@@ -49,48 +70,21 @@ function App() {
     setUser(null);
   };
 
-  // Wait until authentication status is determined before rendering
   if (!isAuthLoaded) {
-    return <div>Loading...</div>; // Or a spinner component
+    return <div>Loading...</div>;
   }
 
   return (
     <Router>
-      <div className="app-layout">
-        {/* The Sidebar is now rendered alongside the routes and will show/hide based on user state */}
-        {user && <Sidebar user={user} onLogout={handleLogout} />}
-        
-        <main className="main-content">
-          <Routes>
-            {!user ? (
-              // --- Public Routes ---
-              <>
-                <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
-                {/* Redirect any other path to /login if not authenticated */}
-                <Route path="*" element={<Navigate to="/login" replace />} />
-              </>
-            ) : (
-              // --- Protected Routes ---
-              <>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/projects" element={<Projects />} />
-                <Route path="/tasks" element={<Tasks />} />
-                <Route path="/clients" element={<Clients />} />
-                <Route path="/invoices" element={<Invoices />} />
-                <Route path="/contracts" element={<Contracts />} />
-                <Route path="/services" element={<Services />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/users" element={<Users />} />
-                <Route path="/settings" element={<Settings />} />
-
-                {/* Redirect from root or /login to /dashboard when logged in */}
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-              </>
-            )}
-          </Routes>
-        </main>
-      </div>
+      <Routes>
+        {!user ? (
+          // --- Render Login page if not authenticated ---
+          <Route path="*" element={<Login onLoginSuccess={handleLoginSuccess} />} />
+        ) : (
+          // --- Render the main AppLayout for all paths if authenticated ---
+          <Route path="/*" element={<AppLayout user={user} onLogout={handleLogout} />} />
+        )}
+      </Routes>
     </Router>
   );
 }

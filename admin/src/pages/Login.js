@@ -21,7 +21,7 @@ function Login({ onLogin }) { // Accept the onLogin prop
       
       localStorage.setItem('token', data.token);
       
-      onLogin(); // Call the onLogin function passed from App.js
+      props.onLoginSuccess(); // Call the onLogin function passed from App.js
     } catch (err) {
       setError(err.message);
     }
