@@ -5,32 +5,26 @@ import { CSS } from '@dnd-kit/utilities';
 import './Shared.css';
 import './Tasks.css';
 
-// Task Card now has an onEdit prop to make it clickable
+// Draggable Task Card Component
 const TaskCard = ({ task, onEdit }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task._id });
   const style = { transform: CSS.Transform.toString(transform), transition };
-
   return (
-    // This main div is now just a container
     <div className="task-card" ref={setNodeRef} style={style}>
-      {/* This new div is the drag handle */}
-      <div className="drag-handle" {...attributes} {...listeners}>
-        <span className="drag-icon">::</span>
-      </div>
-
-      <div className="card-content">
-        <h4>{task.title}</h4>
-        <p className="task-project-name">{task.projectId?.title}</p>
-        <p className="task-assignee">{task.assignedTo?.name || 'Unassigned'}</p>
-      </div>
-      
-      {/* The button is now separate from the drag handle */}
-      <button className="edit-task-button" onClick={() => onEdit(task)}>✏️</button>
+        <div className="drag-handle" {...attributes} {...listeners}>
+            <span className="drag-icon">::</span>
+        </div>
+        <div className="card-content">
+            <h4>{task.title}</h4>
+            <p className="task-project-name">{task.projectId?.title}</p>
+            <p className="task-assignee">{task.assignedTo?.name || 'Unassigned'}</p>
+        </div>
+        <button className="edit-task-button" onClick={() => onEdit(task)}>✏️</button>
     </div>
   );
 };
 
-// TaskColumn now passes the onEdit function down to the card
+// Droppable Column Component
 const TaskColumn = ({ id, title, tasks, onEdit }) => {
   const { setNodeRef } = useSortable({ id });
   return (
@@ -44,6 +38,7 @@ const TaskColumn = ({ id, title, tasks, onEdit }) => {
     </div>
   );
 };
+
 
 function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -64,7 +59,7 @@ function Tasks() {
     try {
         const [tasksRes, projectsRes, usersRes] = await Promise.all([
             fetch(`${process.env.REACT_APP_API_URL}/api/tasks`, { headers: { 'x-auth-token': token } }),
-            fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } }), // Corrected typo here
+            fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
             fetch(`${process.env.REACT_APP_API_URL}/api/users`, { headers: { 'x-auth-token': token } })
         ]);
         const tasksData = await tasksRes.json();
@@ -105,10 +100,10 @@ function Tasks() {
     }
   };
 
-  const handleInputChange = (e) => {
+  const handleAddInputChange = (e) => {
     setNewTask({ ...newTask, [e.target.name]: e.target.value });
   };
-
+  
   const handleEditInputChange = (e) => {
     setEditingTask({ ...editingTask, [e.target.name]: e.target.value });
   };
@@ -159,10 +154,10 @@ function Tasks() {
           <div className="modal-content">
             <div className="modal-header"><h2 className="modal-title">Add New Task</h2><button className="close-button" onClick={() => setShowAddModal(false)}>&times;</button></div>
             <form onSubmit={handleAddTask}>
-              <div className="form-group"><label>Task Title</label><input type="text" name="title" onChange={handleInputChange} required /></div>
-              <div className="form-group"><label>Assign to Project</label><select name="projectId" onChange={handleInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
-              <div className="form-group"><label>Description</label><textarea name="description" rows="3" onChange={handleInputChange}></textarea></div>
-              <div className="form-group"><label>Assign To</label><select name="assignedTo" onChange={handleInputChange}><option value="">Unassigned</option>{users.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}</select></div>
+              <div className="form-group"><label>Task Title</label><input type="text" name="title" onChange={handleAddInputChange} required /></div>
+              <div className="form-group"><label>Assign to Project</label><select name="projectId" onChange={handleAddInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
+              <div className="form-group"><label>Description</label><textarea name="description" rows="3" onChange={handleAddInputChange}></textarea></div>
+              <div className="form-group"><label>Assign To</label><select name="assignedTo" onChange={handleAddInputChange}><option value="">Unassigned</option>{users.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}</select></div>
               <button type="submit" className="add-button">Save Task</button>
             </form>
           </div>
@@ -178,6 +173,7 @@ function Tasks() {
               <div className="form-group"><label>Assign to Project</label><select name="projectId" value={editingTask.projectId?._id || editingTask.projectId} onChange={handleEditInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
               <div className="form-group"><label>Description</label><textarea name="description" rows="3" value={editingTask.description} onChange={handleEditInputChange}></textarea></div>
               <div className="form-group"><label>Assign To</label><select name="assignedTo" value={editingTask.assignedTo?._id || editingTask.assignedTo} onChange={handleEditInputChange}><option value="">Unassigned</option>{users.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}</select></div>
+              <div className="form-group"><label>Status</label><select name="status" value={editingTask.status} onChange={handleEditInputChange}><option value="To Do">To Do</option><option value="In Progress">In Progress</option><option value="On Hold">On Hold</option><option value="Done">Done</option></select></div>
               <button type="submit" className="add-button">Update Task</button>
             </form>
           </div>

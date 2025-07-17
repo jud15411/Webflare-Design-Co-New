@@ -75,9 +75,8 @@ const adminOnlyMiddleware = (req, res, next) => {
     }
 
     app.get('/api/users', authMiddleware, async (req, res) => {
-    // Exclude the current user from the list and don't send back passwords
-    const users = await User.find({ _id: { $ne: req.userId } }).select('-password');
-    res.json(users);
+        const users = await User.find().select('-password');
+        res.json(users);
     });
 
     // UPDATE a user's role
