@@ -667,12 +667,14 @@ app.get('/api/projects/:id', authMiddleware, async (req, res) => {
             });
 
         if (!project) {
+            // Send JSON error for Not Found
             return res.status(404).json({ msg: 'Project not found.' });
         }
         res.json(project);
     } catch (err) {
         console.error('Error fetching single project:', err);
-        res.status(500).send('Server Error fetching project details.');
+        // FIX: Send JSON error for server errors
+        res.status(500).json({ msg: 'Server Error fetching project details.' });
     }
 });
 
