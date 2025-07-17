@@ -1,13 +1,11 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom'; // Import NavLink
 import './Sidebar.css';
 import Notifications from './Notifications';
 
-function Sidebar({ user, currentPage, navigateTo }) {
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.reload();
-  };
-
+// The onLogout prop is now used to handle logging out
+function Sidebar({ user, onLogout }) {
+  
   // Check for CEO/CTO level admin access
   const isAdmin = user && ['CEO', 'CTO'].includes(user.role);
   // Check for CEO-only access
@@ -22,31 +20,31 @@ function Sidebar({ user, currentPage, navigateTo }) {
       <nav className="sidebar-nav">
         <ul>
           {/* Links for All Users */}
-          <li className={currentPage === 'dashboard' ? 'active' : ''}><button onClick={() => navigateTo('dashboard')}>Dashboard</button></li>
-          <li className={currentPage === 'projects' ? 'active' : ''}><button onClick={() => navigateTo('projects')}>Projects</button></li>
-          <li className={currentPage === 'tasks' ? 'active' : ''}><button onClick={() => navigateTo('tasks')}>Tasks</button></li>
+          <li><NavLink to="/dashboard">Dashboard</NavLink></li>
+          <li><NavLink to="/projects">Projects</NavLink></li>
+          <li><NavLink to="/tasks">Tasks</NavLink></li>
           
           {/* Admin (CEO & CTO) Links */}
           {isAdmin && (
             <>
-              <li className={currentPage === 'clients' ? 'active' : ''}><button onClick={() => navigateTo('clients')}>Clients</button></li>
-              <li className={currentPage === 'invoices' ? 'active' : ''}><button onClick={() => navigateTo('invoices')}>Invoices</button></li>
-              <li className={currentPage === 'contracts' ? 'active' : ''}><button onClick={() => navigateTo('contracts')}>Contracts</button></li>
+              <li><NavLink to="/clients">Clients</NavLink></li>
+              <li><NavLink to="/invoices">Invoices</NavLink></li>
+              <li><NavLink to="/contracts">Contracts</NavLink></li>
             </>
           )}
 
           {/* CEO Only Links */}
           {isCeo && (
             <>
-              <li className={currentPage === 'reports' ? 'active' : ''}><button onClick={() => navigateTo('reports')}>Reports</button></li>
-              <li className={currentPage === 'addUser' ? 'active' : ''}><button onClick={() => navigateTo('addUser')}>Users</button></li>
-              <li className={currentPage === 'services' ? 'active' : ''}><button onClick={() => navigateTo('services')}>Services</button></li>
+              <li><NavLink to="/reports">Reports</NavLink></li>
+              <li><NavLink to="/users">Users</NavLink></li>
+              <li><NavLink to="/services">Services</NavLink></li>
             </>
           )}
 
           {/* Links for All Users */}
-          <li className={currentPage === 'settings' ? 'active' : ''}><button onClick={() => navigateTo('settings')}>Settings</button></li>
-          <li><button onClick={handleLogout} className="nav-link-logout">Log Out</button></li>
+          <li><NavLink to="/settings">Settings</NavLink></li>
+          <li><button onClick={onLogout} className="nav-link-logout">Log Out</button></li>
         </ul>
       </nav>
     </aside>

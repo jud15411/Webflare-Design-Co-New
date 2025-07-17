@@ -9,9 +9,9 @@
 .sidebar-header {
   padding: 20px;
   background-color: #34495e;
-  display: flex; /* Add this */
-  justify-content: space-between; /* Add this */
-  align-items: center; /* Add this */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .sidebar-header h3 {
@@ -25,8 +25,9 @@
   margin: 0;
 }
 
-/* This now targets the button element */
-.sidebar-nav li button {
+/* This now targets the button or the NavLink's <a> tag */
+.sidebar-nav li button,
+.sidebar-nav li a {
   display: block;
   width: 100%;
   padding: 15px 20px;
@@ -41,18 +42,20 @@
   transition: background-color 0.2s;
 }
 
-.sidebar-nav li button:hover {
+.sidebar-nav li button:hover,
+.sidebar-nav li a:hover {
   background-color: #34495e;
 }
 
-.sidebar-nav li.active button {
+/* This selector is UPDATED to style the active NavLink */
+.sidebar-nav li a.active {
   background-color: #1abc9c;
   color: #fff;
+  font-weight: 600;
 }
 
 .nav-link-logout {
-  color: #e74c3c !important; /* A red color to stand out */
-  font-weight: 600;
+  width: 100%; /* Ensure logout button takes full width */
 }
 
 .nav-link-logout:hover {
