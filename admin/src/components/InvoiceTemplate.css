@@ -1,0 +1,38 @@
+/* Styles for the printable invoice component */
+.invoice-wrapper {
+  font-family: Arial, sans-serif;
+  color: #333;
+  padding: 40px;
+  background: white;
+  width: 210mm; /* A4 width */
+  min-height: 297mm; /* A4 height */
+}
+
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 4px solid #00BFFF;
+  padding-bottom: 20px;
+  margin-bottom: 40px;
+}
+.invoice-logo { width: 60px; height: 60px; }
+.invoice-details h2 { margin: 0; color: #333; text-align: right; }
+.invoice-details p { margin: 5px 0 0 0; text-align: right; }
+
+.billing-details { display: flex; justify-content: space-between; margin-bottom: 40px; }
+.billing-details h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+.billing-details p { margin: 4px 0; }
+
+.invoice-table { width: 100%; border-collapse: collapse; }
+.invoice-table th, .invoice-table td { border: 1px solid #eee; padding: 12px; text-align: left; }
+.invoice-table thead { background-color: #f9f9f9; }
+.invoice-table tfoot .total-label { text-align: right; font-weight: bold; border: none; }
+.invoice-table tfoot .total-amount { font-weight: bold; font-size: 1.2em; background-color: #f9f9f9; }
+
+.invoice-footer { margin-top: 50px; text-align: center; color: #777; font-size: 0.9em; border-top: 1px solid #eee; padding-top: 20px; }
+
+/* This class hides the template when not printing */
+.hidden-for-print {
+  display: none;
+}

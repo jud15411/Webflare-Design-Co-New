@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
+import InvoiceTemplate from '../components/InvoiceTemplate';
 import './Shared.css';
 
 function Invoices() {
@@ -7,10 +9,11 @@ function Invoices() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
-  // Correctly initialize newInvoice state without the invoiceNumber
   const [newInvoice, setNewInvoice] = useState({ amount: 0, dueDate: '', projectId: '', status: 'Draft' });
+  const [invoiceToPrint, setInvoiceToPrint] = useState(null);
 
   const token = localStorage.getItem('token');
+  const componentRef = useRef();
 
   const fetchData = useCallback(async () => {
     const [invoicesRes, projectsRes] = await Promise.all([
@@ -35,7 +38,7 @@ function Invoices() {
       setNewInvoice({ ...newInvoice, [name]: value });
     }
   };
-  
+
   const handleAddInvoice = async (e) => {
     e.preventDefault();
     await fetch(`${process.env.REACT_APP_API_URL}/api/invoices`, {
@@ -44,7 +47,7 @@ function Invoices() {
       body: JSON.stringify(newInvoice)
     });
     setShowAddModal(false);
-    setNewInvoice({ amount: 0, dueDate: '', projectId: '', status: 'Draft' }); // Reset form
+    setNewInvoice({ amount: 0, dueDate: '', projectId: '', status: 'Draft' });
     fetchData();
   };
 
@@ -78,6 +81,18 @@ function Invoices() {
       fetchData();
     }
   };
+  
+  const handlePrint = useReactToPrint({
+    content: () => componentRef.current,
+    onAfterPrint: () => setInvoiceToPrint(null),
+  });
+
+  const triggerPrint = (invoice) => {
+    setInvoiceToPrint(invoice);
+    setTimeout(() => {
+      handlePrint();
+    }, 0);
+  };
 
   return (
     <div>
@@ -110,6 +125,7 @@ function Invoices() {
                 <td className="actions-cell">
                   <button className="edit-button" onClick={() => openEditModal(invoice)}>Edit</button>
                   <button className="delete-button" onClick={() => handleDeleteInvoice(invoice._id)}>Delete</button>
+                  <button onClick={() => triggerPrint(invoice)}>Print</button>
                 </td>
               </tr>
             ))}
@@ -117,7 +133,6 @@ function Invoices() {
         </table>
       </div>
 
-      {/* Add Invoice Modal */}
       {showAddModal && (
         <div className="modal-backdrop">
           <div className="modal-content">
@@ -133,7 +148,6 @@ function Invoices() {
         </div>
       )}
 
-      {/* Edit Invoice Modal */}
       {showEditModal && editingInvoice && (
         <div className="modal-backdrop">
           <div className="modal-content">
@@ -149,6 +163,10 @@ function Invoices() {
           </div>
         </div>
       )}
+
+      <div className="hidden-for-print">
+        <InvoiceTemplate ref={componentRef} invoice={invoiceToPrint} />
+      </div>
     </div>
   );
 }
