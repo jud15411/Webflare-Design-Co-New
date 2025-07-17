@@ -2,7 +2,10 @@ import React from 'react';
 import './InvoiceTemplate.css';
 
 const InvoiceTemplate = React.forwardRef(({ invoice }, ref) => {
-  if (!invoice) return null;
+  if (!invoice) {
+    console.log("InvoiceTemplate: Returning null because invoice is null.");
+    return null;
+  }
 
   const client = invoice.projectId?.clientId;
   const project = invoice.projectId;
