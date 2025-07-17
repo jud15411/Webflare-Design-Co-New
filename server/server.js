@@ -128,7 +128,7 @@ app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, re
     } catch (err) { res.status(500).send('Server error'); }
 });
 
-app.get('/api/users', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
+app.get('/api/users', authMiddleware, adminOnlyMiddleware, async (req, res) => {
     const users = await User.find().select('-password');
     res.json(users);
 });
