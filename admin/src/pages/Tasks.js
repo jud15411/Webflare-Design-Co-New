@@ -203,7 +203,7 @@ function Tasks() {
             <form onSubmit={handleLogTime}>
               <h3>Log Time for This Task</h3>
               <div className="form-group"><label>Hours</label><input type="number" step="0.1" name="hours" value={timeLog.hours} onChange={handleTimeLogInputChange} required /></div>
-              <div className="form-group"><label>Work Description (Optional)</label><textarea name="description" rows="2" value={timeLog.description} onChange={handleTimeLogInputChange}></textarea></div>
+              <div className="form-group"><label>Work Description (Required)</label><textarea name="description" rows="2" value={timeLog.description} onChange={handleTimeLogInputChange}></textarea></div>
               <button type="submit" className="add-button">Log Time</button>
             </form>
           </div>

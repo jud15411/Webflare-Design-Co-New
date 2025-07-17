@@ -10,7 +10,7 @@ const fs = require('fs');
 
 // --- Read Environment Variables ---
 const JWT_SECRET = process.env.JWT_SECRET;
-const MONGO_URI = process.env.MONGO_URI; // <-- THIS WAS THE MISSING LINE
+const MONGO_URI = process.env.MONGO_URI;
 
 // --- Initialize App & Models ---
 const app = express();
@@ -24,6 +24,7 @@ const Contract = require('./models/Contract');
 const Service = require('./models/Service');
 const Comment = require('./models/Comment');
 const TimeEntry = require('./models/TimeEntry');
+const Notification = require('./models/Notification');
 
 // --- Middleware ---
 app.use(cors());
@@ -40,75 +41,39 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage }).single('projectImage');
 
 // --- DB Connection ---
-// This line will now work correctly
 mongoose.connect(MONGO_URI).then(() => console.log("MongoDB Connected!")).catch(err => console.error(err));
 
-// --- Auth Middleware ---
+// --- AUTHENTICATION & PERMISSIONS MIDDLEWARE ---
 const authMiddleware = (req, res, next) => {
     const token = req.header('x-auth-token');
     if (!token) return res.status(401).json({ msg: 'No token, authorization denied' });
     try {
-        const decoded = jwt.verify(token, JWT_SECRET );
+        const decoded = jwt.verify(token, JWT_SECRET);
         req.userId = decoded.id;
+        req.userRole = decoded.role;
         next();
     } catch (err) {
         res.status(401).json({ msg: 'Token is not valid' });
     }
 };
+
 const adminOnlyMiddleware = (req, res, next) => {
-    // This middleware assumes authMiddleware has already run and attached req.userId
-    // We will now re-decode the token here to securely get the role.
-    const token = req.header('x-auth-token');
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        
-        // The role is inside the 'user' object in the token
-        // This was the source of the error
-        const userRole = decoded.role; 
-
-        if (!['CEO', 'CTO'].includes(userRole)) {
-            return res.status(403).json({ msg: 'Access denied. Admin privileges required.' });
-        }
-        
-        next();
-    } catch (err) {
-        res.status(500).send('Server error');
+    if (!['CEO', 'CTO'].includes(req.userRole)) {
+        return res.status(403).json({ msg: 'Access denied. Admin privileges required.' });
     }
+    next();
+};
 
-    app.get('/api/users', authMiddleware, async (req, res) => {
-        const users = await User.find().select('-password');
-        res.json(users);
-    });
-
-    // UPDATE a user's role
-    app.put('/api/users/:id/role', authMiddleware, adminOnlyMiddleware, async (req, res) => {
-        const { role } = req.body;
-        const updatedUser = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-password');
-        res.json(updatedUser);
-    });
-
-    // DELETE a user
-    app.delete('/api/users/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => {
-        await User.findByIdAndDelete(req.params.id);
-        res.json({ msg: 'User deleted successfully' });
-    });
+const ceoOnlyMiddleware = (req, res, next) => {
+    if (req.userRole !== 'CEO') {
+        return res.status(403).json({ msg: 'Access denied. CEO privileges required.' });
+    }
+    next();
 };
 
 // --- API ROUTES ---
 
-// AUTH
-app.post('/api/auth/register', authMiddleware, adminOnlyMiddleware, async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-    let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ msg: 'User already exists' });
-    user = new User({ name, email, password });
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
-    await user.save();
-    res.status(201).send('User registered successfully');
-  } catch (err) { res.status(500).send('Server error'); }
-});
+// == AUTH & USER MANAGEMENT ==
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -117,53 +82,68 @@ app.post('/api/auth/login', async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
         const payload = { id: user.id, role: user.role };
-        jwt.sign(payload, JWT_SECRET , { expiresIn: '8h' }, (err, token) => {
+        jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
             if (err) throw err;
             res.json({ token });
         });
     } catch (err) { res.status(500).send('Server error'); }
 });
+
 app.get('/api/auth/user', authMiddleware, async (req, res) => {
     const user = await User.findById(req.userId).select('-password');
     res.json(user);
 });
+
 app.put('/api/auth/user', authMiddleware, async (req, res) => {
     const { name, email } = req.body;
     const updatedUser = await User.findByIdAndUpdate(req.userId, { name, email }, { new: true }).select('-password');
     res.json(updatedUser);
 });
+
 app.put('/api/auth/change-password', authMiddleware, async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
-        
-        // 1. Find the current user in the database
         const user = await User.findById(req.userId);
-        if (!user) {
-            return res.status(404).json({ msg: 'User not found' });
-        }
-
-        // 2. Verify their current password is correct
+        if (!user) return res.status(404).json({ msg: 'User not found' });
         const isMatch = await bcrypt.compare(currentPassword, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ msg: 'Incorrect current password' });
-        }
-
-        // 3. Hash the new password
+        if (!isMatch) return res.status(400).json({ msg: 'Incorrect current password' });
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(newPassword, salt);
-
-        // 4. Save the user with the new password
         await user.save();
-
         res.json({ msg: 'Password updated successfully' });
-
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
+    } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// DASHBOARD
+app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
+    try {
+        const { name, email, password, role } = req.body;
+        let user = await User.findOne({ email });
+        if (user) return res.status(400).json({ msg: 'User already exists' });
+        user = new User({ name, email, password, role });
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(password, salt);
+        await user.save();
+        res.status(201).send('User registered successfully');
+    } catch (err) { res.status(500).send('Server error'); }
+});
+
+app.get('/api/users', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
+    const users = await User.find().select('-password');
+    res.json(users);
+});
+
+app.put('/api/users/:id/role', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
+    const { role } = req.body;
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-password');
+    res.json(updatedUser);
+});
+
+app.delete('/api/users/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ msg: 'User deleted successfully' });
+});
+
+// == DASHBOARD & PUBLIC ROUTES ==
 app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
     try {
         const [activeProjectsResult, pendingTasksResult, unpaidInvoicesResult, recentProjectsResult] = await Promise.allSettled([
@@ -183,7 +163,6 @@ app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// FEATURED PROJECTS
 app.get('/api/featured-projects', async (req, res) => {
     try {
         const featured = await Project.find({ isFeatured: true }).limit(5);
@@ -191,55 +170,26 @@ app.get('/api/featured-projects', async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 
+app.get('/api/services', async (req, res) => {
+    try {
+        const services = await Service.find();
+        res.json(services);
+    } catch (err) { res.status(500).send('Server Error'); }
+});
+
+// == CORE PROTECTED ROUTES ==
 // PROJECTS
 app.get('/api/projects', authMiddleware, async (req, res) => {
     try {
         const projects = await Project.aggregate([
-            // Step 1: Look up comments that belong to each project
-            {
-                $lookup: {
-                    from: 'comments', // The comments collection
-                    localField: '_id', // The ID from the projects collection
-                    foreignField: 'project', // The field in the comments collection
-                    as: 'comments' // The new array field name
-                }
-            },
-            // Step 2: Look up the client for each project
-            {
-                $lookup: {
-                    from: 'clients',
-                    localField: 'clientId',
-                    foreignField: '_id',
-                    as: 'clientDetails'
-                }
-            },
-            // Step 3: Deconstruct the clientDetails array to be a single object
-            {
-                $unwind: {
-                    path: '$clientDetails',
-                    preserveNullAndEmptyArrays: true // Keep projects even if they have no client
-                }
-            },
-            // Step 4: Add a new field 'commentCount' that is the size of the comments array
-            {
-                $addFields: {
-                    commentCount: { $size: '$comments' },
-                    clientId: '$clientDetails' // Overwrite clientId with the populated object
-                }
-            },
-            // Step 5: Remove the large comments array from the final result
-            {
-                $project: {
-                    comments: 0,
-                    clientDetails: 0
-                }
-            }
+            { $lookup: { from: 'comments', localField: '_id', foreignField: 'project', as: 'comments' } },
+            { $lookup: { from: 'clients', localField: 'clientId', foreignField: '_id', as: 'clientDetails' } },
+            { $unwind: { path: '$clientDetails', preserveNullAndEmptyArrays: true } },
+            { $addFields: { commentCount: { $size: '$comments' }, clientId: '$clientDetails' } },
+            { $project: { comments: 0, clientDetails: 0 } }
         ]);
         res.json(projects);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
+    } catch (err) { res.status(500).send('Server Error'); }
 });
 app.post('/api/projects', authMiddleware, (req, res) => {
     upload(req, res, async (err) => {
@@ -301,29 +251,24 @@ app.put('/api/clients/:id', authMiddleware, adminOnlyMiddleware, async (req, res
 app.delete('/api/clients/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Client.findByIdAndDelete(req.params.id)));
 
 // TASKS
-app.get('/api/tasks', authMiddleware, async (req, res) => {
-    try {
-        const tasks = await Task.find()
-            .populate({ path: 'projectId', select: 'title' })
-            .populate({ path: 'assignedTo', select: 'name' }); // <-- Add this line to get the assignee's name
-        res.json(tasks);
-    } catch (err) {
-        res.status(500).send('Server Error');
+app.get('/api/tasks', authMiddleware, async (req, res) => res.json(await Task.find().populate({ path: 'projectId', select: 'title' }).populate({ path: 'assignedTo', select: 'name' })));
+app.post('/api/tasks', authMiddleware, async (req, res) => {
+    const task = new Task(req.body);
+    await task.save();
+    if (task.assignedTo) {
+        const author = await User.findById(req.userId);
+        const project = await Project.findById(task.projectId);
+        const message = `${author.name} assigned you a new task: "${task.title}" for project "${project.title}"`;
+        new Notification({ recipient: task.assignedTo, message, link: `/tasks` }).save();
     }
+    res.status(201).json(task);
 });
-app.post('/api/tasks', authMiddleware, async (req, res) => res.status(201).json(await new Task(req.body).save()));
 app.put('/api/tasks/:taskId', authMiddleware, async (req, res) => {
     try {
-        const updatedTask = await Task.findByIdAndUpdate(
-            req.params.taskId, 
-            req.body, 
-            { new: true }
-        );
+        const updatedTask = await Task.findByIdAndUpdate(req.params.taskId, req.body, { new: true });
         if (!updatedTask) return res.status(404).json({ msg: 'Task not found' });
         res.json(updatedTask);
-    } catch (err) {
-        res.status(500).send('Server Error');
-    }
+    } catch (err) { res.status(500).send('Server Error'); }
 });
 app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
     try {
@@ -332,78 +277,6 @@ app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
         if (!updatedTask) return res.status(404).json({ msg: 'Task not found' });
         res.json(updatedTask);
     } catch (err) { res.status(500).send('Server Error'); }
-});
-
-// == COMMENTS ==
-// GET all comments for a specific project
-app.get('/api/projects/:projectId/comments', authMiddleware, async (req, res) => {
-    try {
-        const comments = await Comment.find({ project: req.params.projectId })
-            .sort({ createdAt: 'desc' }) // Show newest comments first
-            .populate('author', 'name'); // Get the author's name
-        res.json(comments);
-    } catch (err) {
-        res.status(500).send('Server Error');
-    }
-});
-
-// POST a new comment on a project
-app.post('/api/projects/:projectId/comments', authMiddleware, async (req, res) => {
-    try {
-        const newComment = new Comment({
-            text: req.body.text,
-            author: req.userId, // Get user ID from the auth token
-            project: req.params.projectId
-        });
-        const comment = await newComment.save();
-        // Populate the author's name before sending it back
-        const populatedComment = await Comment.findById(comment._id).populate('author', 'name');
-        res.status(201).json(populatedComment);
-    } catch (err) {
-        res.status(500).send('Server Error');
-    }
-});
-
-// == SERVICES ==
-// PUBLIC: Get all services for the client-side page
-app.get('/api/services', async (req, res) => {
-    try {
-        const services = await Service.find();
-        res.json(services);
-    } catch (err) {
-        res.status(500).send('Server Error');
-    }
-});
-
-// PROTECTED: Create a new service (Admin only)
-app.post('/api/services', authMiddleware, adminOnlyMiddleware, async (req, res) => {
-    try {
-        const newService = new Service(req.body);
-        await newService.save();
-        res.status(201).json(newService);
-    } catch (err) {
-        res.status(500).send('Server Error');
-    }
-});
-
-// PROTECTED: Update a service (Admin only)
-app.put('/api/services/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => {
-    try {
-        const service = await Service.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json(service);
-    } catch (err) {
-        res.status(500).send('Server Error');
-    }
-});
-
-// PROTECTED: Delete a service (Admin only)
-app.delete('/api/services/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => {
-    try {
-        await Service.findByIdAndDelete(req.params.id);
-        res.json({ msg: 'Service deleted' });
-    } catch (err) {
-        res.status(500).send('Server Error');
-    }
 });
 
 // INVOICES
@@ -418,65 +291,67 @@ app.post('/api/contracts', authMiddleware, adminOnlyMiddleware, async (req, res)
 app.put('/api/contracts/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/contracts/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.findByIdAndDelete(req.params.id)));
 
-// == TIME TRACKING ==
-// POST a new time entry for a task
+// SERVICES (Management)
+app.post('/api/services', authMiddleware, ceoOnlyMiddleware, async (req, res) => { /* ... */ });
+app.put('/api/services/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => { /* ... */ });
+app.delete('/api/services/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => { /* ... */ });
+
+// COMMENTS
+app.get('/api/projects/:projectId/comments', authMiddleware, async (req, res) => {
+    try {
+        const comments = await Comment.find({ project: req.params.projectId }).sort({ createdAt: 'desc' }).populate('author', 'name');
+        res.json(comments);
+    } catch (err) { res.status(500).send('Server Error'); }
+});
+app.post('/api/projects/:projectId/comments', authMiddleware, async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.projectId);
+        const newComment = new Comment({ text: req.body.text, author: req.userId, project: req.params.projectId });
+        await newComment.save();
+        const author = await User.findById(req.userId);
+        const message = `${author.name} commented on project "${project.title}"`;
+        const allUsers = await User.find({ _id: { $ne: req.userId } });
+        allUsers.forEach(user => { new Notification({ recipient: user._id, message, link: `/projects/${project._id}` }).save(); });
+        const populatedComment = await Comment.findById(newComment._id).populate('author', 'name');
+        res.status(201).json(populatedComment);
+    } catch (err) { res.status(500).send('Server Error'); }
+});
+
+// TIME TRACKING
 app.post('/api/tasks/:taskId/time', authMiddleware, async (req, res) => {
     try {
         const { hours, description } = req.body;
         const task = await Task.findById(req.params.taskId);
-        if (!task) {
-            return res.status(404).json({ msg: 'Task not found' });
-        }
-
-        const newTimeEntry = new TimeEntry({
-            hours,
-            description,
-            user: req.userId,
-            task: req.params.taskId,
-            project: task.projectId
-        });
-        
+        if (!task) return res.status(404).json({ msg: 'Task not found' });
+        const newTimeEntry = new TimeEntry({ hours, description, user: req.userId, task: req.params.taskId, project: task.projectId });
         await newTimeEntry.save();
         res.status(201).json(newTimeEntry);
-    } catch (err) {
-        res.status(500).send('Server Error');
-    }
+    } catch (err) { res.status(500).send('Server Error'); }
 });
-
-// GET aggregated time report by project
 app.get('/api/reports/time-by-project', authMiddleware, adminOnlyMiddleware, async (req, res) => {
     try {
         const timeReport = await TimeEntry.aggregate([
-            {
-                $group: {
-                    _id: '$project',
-                    totalHours: { $sum: '$hours' }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'projects',
-                    localField: '_id',
-                    foreignField: '_id',
-                    as: 'projectDetails'
-                }
-            },
-            {
-                $unwind: '$projectDetails'
-            },
-            {
-                $project: {
-                    _id: 0,
-                    projectId: '$projectDetails._id',
-                    projectTitle: '$projectDetails.title',
-                    totalHours: 1
-                }
-            }
+            { $group: { _id: '$project', totalHours: { $sum: '$hours' } } },
+            { $lookup: { from: 'projects', localField: '_id', foreignField: '_id', as: 'projectDetails' } },
+            { $unwind: '$projectDetails' },
+            { $project: { _id: 0, projectId: '$projectDetails._id', projectTitle: '$projectDetails.title', totalHours: 1 } }
         ]);
         res.json(timeReport);
-    } catch (err) {
-        res.status(500).send('Server Error');
-    }
+    } catch (err) { res.status(500).send('Server Error'); }
+});
+
+// NOTIFICATIONS
+app.get('/api/notifications', authMiddleware, async (req, res) => {
+    try {
+        const notifications = await Notification.find({ recipient: req.userId, isRead: false }).sort({ createdAt: -1 });
+        res.json(notifications);
+    } catch (err) { res.status(500).send('Server Error'); }
+});
+app.put('/api/notifications/mark-read', authMiddleware, async (req, res) => {
+    try {
+        await Notification.updateMany({ recipient: req.userId, isRead: false }, { isRead: true });
+        res.json({ msg: 'Notifications marked as read' });
+    } catch (err) { res.status(500).send('Server Error'); }
 });
 
 // --- Start Server ---

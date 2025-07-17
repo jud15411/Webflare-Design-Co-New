@@ -1,5 +1,6 @@
 import React from 'react';
 import './Sidebar.css';
+import Notifications from './Notifications';
 
 function Sidebar({ user, currentPage, navigateTo }) {
   const handleLogout = () => {
@@ -16,6 +17,7 @@ function Sidebar({ user, currentPage, navigateTo }) {
     <aside className="sidebar">
       <div className="sidebar-header">
         <h3>Webflare Admin</h3>
+        <Notifications />
       </div>
       <nav className="sidebar-nav">
         <ul>
