@@ -15,4 +15,10 @@ const ProjectSchema = new mongoose.Schema({
   clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true }
 });
 
+projectSchema.virtual('milestones', {
+    ref: 'Milestone',      // The model to use
+    localField: '_id',     // Find milestones where `localField`
+    foreignField: 'projectId' // is equal to `foreignField`
+});
+
 module.exports = mongoose.model('Project', ProjectSchema);
