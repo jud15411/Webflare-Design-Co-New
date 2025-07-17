@@ -8,9 +8,10 @@ function ProjectDetail() {
   const [project, setProject] = useState(null);
   const [milestones, setMilestones] = useState([]); // State for milestones
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(''); // For general fetch errors (e.g., project not found)
+  // Consolidating API messages into apiMessage and messageType
   const [apiMessage, setApiMessage] = useState(''); // For success/error messages from API actions
-  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
+  const [messageType, setMessageType] = useState(''); // 'success' or 'error' or 'info'
 
   // States for milestone modals
   const [showAddMilestoneModal, setShowAddMilestoneModal] = useState(false);
@@ -20,6 +21,17 @@ function ProjectDetail() {
   const [selectedMilestone, setSelectedMilestone] = useState(null); // Milestone being edited/deleted
 
   const token = localStorage.getItem('token');
+
+  // Helper to display API messages and clear after a delay
+  const displayApiMessage = useCallback((msg, type) => {
+    setApiMessage(msg);
+    setMessageType(type);
+    const timer = setTimeout(() => {
+      setApiMessage('');
+      setMessageType('');
+    }, 5000); // Message disappears after 5 seconds
+    return () => clearTimeout(timer);
+  }, []);
 
   const fetchProjectAndMilestones = useCallback(async () => {
     setIsLoading(true);
@@ -31,16 +43,10 @@ function ProjectDetail() {
       const projectData = await projectResponse.json();
 
       if (!projectResponse.ok) {
-        throw new Error(projectData.msg || 'Failed to fetch project details.');
+        throw new Error(projectData.msg || 'Failed to fetch project details. You may not have permission.');
       }
       setProject(projectData);
 
-      // Fetch milestones for this project
-      // Note: The /api/projects endpoint with aggregate already fetches milestones.
-      // We can refine this to explicitly fetch milestones for a project if needed.
-      // For simplicity, we'll use the populated data from the project details if available,
-      // otherwise, you'd add a /api/milestones?projectId=XXX endpoint.
-      // Based on server.js /api/projects aggregate, milestones are populated within project.
       if (projectData.milestones) {
         const sortedMilestones = projectData.milestones.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
         setMilestones(sortedMilestones);
@@ -54,7 +60,7 @@ function ProjectDetail() {
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, token]); // Dependencies: projectId, token
+  }, [projectId, token]);
 
   useEffect(() => {
     fetchProjectAndMilestones();
@@ -77,14 +83,14 @@ function ProjectDetail() {
     setShowDeleteMilestoneModal(false);
     setNewMilestone({ name: '', description: '', dueDate: '', status: 'Not Started' });
     setSelectedMilestone(null);
-    setApiMessage(''); // Clear API message
+    setApiMessage(''); // Clear any message when modal closes
     setMessageType('');
-  }, []);
+  }, []); // No dependencies, as it only sets state to initial values
 
   // --- Milestone Actions ---
   const handleAddMilestone = useCallback(async (e) => {
     e.preventDefault();
-    setApiMessage('');
+    setApiMessage(''); // Clear message before new action
     setMessageType('');
     try {
       const milestoneData = { ...newMilestone, projectId }; // Link milestone to current project
@@ -97,53 +103,43 @@ function ProjectDetail() {
       if (!response.ok) {
         throw new Error(data.msg || 'Failed to add milestone.');
       }
-      setApiMessage('Milestone added successfully!');
-      setMessageType('success');
+      displayApiMessage('Milestone added successfully!', 'success');
       handleCloseMilestoneModals();
       fetchProjectAndMilestones(); // Re-fetch all data
     } catch (err) {
       console.error("Error adding milestone:", err);
-      setApiMessage(err.message || 'Error adding milestone.');
-      setMessageType('error');
+      displayApiMessage(err.message || 'Error adding milestone.', 'error');
     }
-  }, [newMilestone, projectId, token, handleCloseMilestoneModals, fetchProjectAndMilestones]);
+  }, [newMilestone, projectId, token, handleCloseMilestoneModals, fetchProjectAndMilestones, displayApiMessage]);
 
 
   const handleUpdateMilestone = useCallback(async (e) => {
     e.preventDefault();
-    setApiMessage('');
+    setApiMessage(''); // Clear message before new action
     setMessageType('');
     if (!selectedMilestone) return;
-
-    // Ensure the dueDate is in YYYY-MM-DD format for input type="date"
-    const milestoneData = { 
-      ...selectedMilestone,
-      dueDate: selectedMilestone.dueDate ? new Date(selectedMilestone.dueDate).toISOString().split('T')[0] : ''
-    };
 
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/milestones/${selectedMilestone._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-        body: JSON.stringify(milestoneData),
+        body: JSON.stringify(selectedMilestone), // selectedMilestone state is already updated via handleMilestoneInputChange
       });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.msg || 'Failed to update milestone.');
       }
-      setApiMessage('Milestone updated successfully!');
-      setMessageType('success');
+      displayApiMessage('Milestone updated successfully!', 'success');
       handleCloseMilestoneModals();
       fetchProjectAndMilestones(); // Re-fetch all data
     } catch (err) {
       console.error("Error updating milestone:", err);
-      setApiMessage(err.message || 'Error updating milestone.');
-      setMessageType('error');
+      displayApiMessage(err.message || 'Error updating milestone.', 'error');
     }
-  }, [selectedMilestone, token, handleCloseMilestoneModals, fetchProjectAndMilestones]);
+  }, [selectedMilestone, token, handleCloseMilestoneModals, fetchProjectAndMilestones, displayApiMessage]);
 
   const handleDeleteMilestone = useCallback(async () => {
-    setApiMessage('');
+    setApiMessage(''); // Clear message before new action
     setMessageType('');
     if (!selectedMilestone) return;
     try {
@@ -155,22 +151,19 @@ function ProjectDetail() {
       if (!response.ok) {
         throw new Error(data.msg || 'Failed to delete milestone.');
       }
-      setApiMessage('Milestone deleted successfully!');
-      setMessageType('success');
+      displayApiMessage('Milestone deleted successfully!', 'success');
       handleCloseMilestoneModals();
       fetchProjectAndMilestones(); // Re-fetch all data
     } catch (err) {
       console.error("Error deleting milestone:", err);
-      setApiMessage(err.message || 'Error deleting milestone.');
-      setMessageType('error');
+      displayApiMessage(err.message || 'Error deleting milestone.', 'error');
     }
-  }, [selectedMilestone, token, handleCloseMilestoneModals, fetchProjectAndMilestones]);
+  }, [selectedMilestone, token, handleCloseMilestoneModals, fetchProjectAndMilestones, displayApiMessage]);
 
 
   if (isLoading) return <div>Loading project details...</div>;
   if (error) return <div className="error-message" style={{ padding: '20px' }}>Error: {error}</div>;
   if (!project) return <div>Project not found.</div>;
-
 
   return (
     <div className="project-detail-page">
@@ -181,7 +174,8 @@ function ProjectDetail() {
         <p>Client: {project.clientId ? project.clientId.name : 'N/A'}</p>
       </div>
 
-      {apiMessage && ( // Display API success/error messages
+      {/* Display API success/error messages at the top of the page */}
+      {apiMessage && ( 
         <div className={`message-banner ${messageType}`}>
           {apiMessage}
           <button className="close-message" onClick={() => setApiMessage('')}>X</button>
@@ -246,7 +240,8 @@ function ProjectDetail() {
               <h2 className="modal-title">Add New Milestone</h2>
               <button className="close-button" onClick={handleCloseMilestoneModals}>&times;</button>
             </div>
-            {apiError && <div className="error-message">{apiError}</div>}
+            {/* Display general API message from parent state here as well */}
+            {apiMessage && <div className={`message-banner ${messageType}`}>{apiMessage}</div>}
             <form onSubmit={handleAddMilestone}>
               <div className="form-group"><label>Name</label><input type="text" name="name" value={newMilestone.name} onChange={handleMilestoneInputChange} required /></div>
               <div className="form-group"><label>Description</label><textarea name="description" value={newMilestone.description} onChange={handleMilestoneInputChange}></textarea></div>
@@ -275,11 +270,11 @@ function ProjectDetail() {
               <h2 className="modal-title">Edit Milestone</h2>
               <button className="close-button" onClick={handleCloseMilestoneModals}>&times;</button>
             </div>
-            {apiError && <div className="error-message">{apiError}</div>}
+            {apiMessage && <div className={`message-banner ${messageType}`}>{apiMessage}</div>} {/* Display API message */}
             <form onSubmit={handleUpdateMilestone}>
               <div className="form-group"><label>Name</label><input type="text" name="name" value={selectedMilestone.name} onChange={handleMilestoneInputChange} required /></div>
               <div className="form-group"><label>Description</label><textarea name="description" value={selectedMilestone.description} onChange={handleMilestoneInputChange}></textarea></div>
-              <div className="form-group"><label>Due Date</label><input type="date" name="dueDate" value={selectedMilestone.dueDate ? selectedMilestone.dueDate.split('T')[0] : ''} onChange={handleMilestoneInputChange} required /></div>
+              <div className="form-group"><label>Due Date</label><input type="date" name="dueDate" value={selectedMilestone.dueDate ? new Date(selectedMilestone.dueDate).toISOString().split('T')[0] : ''} onChange={handleMilestoneInputChange} required /></div>
               <div className="form-group">
                 <label>Status</label>
                 <select name="status" value={selectedMilestone.status} onChange={handleMilestoneInputChange}>
@@ -305,7 +300,7 @@ function ProjectDetail() {
               <h2 className="modal-title">Confirm Delete Milestone</h2>
               <button className="close-button" onClick={handleCloseMilestoneModals}>&times;</button>
             </div>
-            {apiError && <div className="error-message">{apiError}</div>}
+            {apiMessage && <div className={`message-banner ${messageType}`}>{apiMessage}</div>} {/* Display API message */}
             <p>Are you sure you want to delete the milestone <strong>{selectedMilestone.name}</strong>? This action cannot be undone, and will unlink any tasks associated with it.</p>
             <div className="modal-actions">
               <button className="cancel-button" onClick={handleCloseMilestoneModals}>Cancel</button>
