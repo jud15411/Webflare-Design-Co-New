@@ -1,0 +1,28 @@
+/* client-portal/src/App.css */
+
+.App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Ensures the app takes at least the full viewport height */
+}
+
+.loading-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-size: 1.5rem;
+  color: #007bff;
+}
+
+.main-content {
+  flex-grow: 1; /* Allows the main content area to take up remaining space */
+  padding: 20px;
+}
+
+/* Add responsive adjustments as needed */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 15px;
+  }
+}
