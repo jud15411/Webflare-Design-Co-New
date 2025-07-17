@@ -48,21 +48,25 @@ function Users() {
     setNewUser({ name: '', email: '', password: '', role: 'Developer' });
   };
 
-  // --- Handlers for User Actions ---
+  // --- Handlers for User Actions (with updated error handling) ---
   const handleAddUser = async (e) => {
     e.preventDefault();
     setApiError('');
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-      body: JSON.stringify(newUser),
-    });
-    if (response.ok) {
-      handleCloseModals();
-      fetchUsers();
-    } else {
-      const errData = await response.json();
-      setApiError(errData.msg);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify(newUser),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        handleCloseModals();
+        fetchUsers();
+      } else {
+        setApiError(data.msg || 'An unknown error occurred.');
+      }
+    } catch (err) {
+      setApiError('A network error occurred. Please check your server connection.');
     }
   };
 
@@ -70,32 +74,40 @@ function Users() {
     e.preventDefault();
     if (!selectedUser) return;
     setApiError('');
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${selectedUser._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-      body: JSON.stringify({
-        name: selectedUser.name,
-        email: selectedUser.email,
-        role: selectedUser.role,
-      }),
-    });
-    if (response.ok) {
-      handleCloseModals();
-      fetchUsers();
-    } else {
-      const errData = await response.json();
-      setApiError(errData.msg);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${selectedUser._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({
+          name: selectedUser.name,
+          email: selectedUser.email,
+          role: selectedUser.role,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        handleCloseModals();
+        fetchUsers();
+      } else {
+        setApiError(data.msg || 'An unknown error occurred.');
+      }
+    } catch (err) {
+      setApiError('A network error occurred. Please check your server connection.');
     }
   };
   
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
-    await fetch(`${process.env.REACT_APP_API_URL}/api/users/${selectedUser._id}`, {
-      method: 'DELETE',
-      headers: { 'x-auth-token': token },
-    });
-    handleCloseModals();
-    fetchUsers();
+    try {
+      await fetch(`${process.env.REACT_APP_API_URL}/api/users/${selectedUser._id}`, {
+        method: 'DELETE',
+        headers: { 'x-auth-token': token },
+      });
+      handleCloseModals();
+      fetchUsers();
+    } catch (err) {
+        setApiError('A network error occurred. Please check your server connection.');
+    }
   };
 
   const handleInputChange = (e, userType) => {
