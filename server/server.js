@@ -74,7 +74,7 @@ const adminOnlyMiddleware = (req, res, next) => {
         res.status(500).send('Server error');
     }
 
-    app.get('/api/users', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    app.get('/api/users', authMiddleware, async (req, res) => {
     // Exclude the current user from the list and don't send back passwords
     const users = await User.find({ _id: { $ne: req.userId } }).select('-password');
     res.json(users);
