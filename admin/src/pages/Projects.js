@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import ProjectDetail from './ProjectDetail';
+import { Link } from 'react-router-dom'; // Import Link
 import './Shared.css';
 import './Projects.css';
 
@@ -9,7 +9,6 @@ function Projects() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   
-  const [selectedProject, setSelectedProject] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
@@ -21,19 +20,30 @@ function Projects() {
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
+    setError('');
     try {
       const [projectsRes, clientsRes] = await Promise.all([
         fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
         fetch(`${process.env.REACT_APP_API_URL}/api/clients`, { headers: { 'x-auth-token': token } })
       ]);
-      if (!projectsRes.ok || !clientsRes.ok) throw new Error('Failed to fetch data');
+      if (!projectsRes.ok || !clientsRes.ok) {
+        // Attempt to parse JSON error even if !response.ok
+        const projectsError = await projectsRes.json().catch(() => ({ msg: 'Unknown error fetching projects' }));
+        const clientsError = await clientsRes.json().catch(() => ({ msg: 'Unknown error fetching clients' }));
+        throw new Error(projectsError.msg || clientsError.msg || 'Failed to fetch data');
+      }
       const projectsData = await projectsRes.json();
       const clientsData = await clientsRes.json();
       setProjects(projectsData);
       setClients(clientsData);
-      setError('');
+
+      // --- DEBUGGING LINE ---
+      console.log('Fetched projects data:', projectsData); // Check what your frontend receives here!
+      // --- END DEBUGGING LINE ---
+
     } catch (err) {
-      setError('Failed to load data.');
+      console.error("Error fetching data in Projects.js:", err);
+      setError(err.message || 'Error loading projects.');
     } finally {
       setIsLoading(false);
     }
@@ -43,163 +53,212 @@ function Projects() {
     fetchData();
   }, [fetchData]);
 
-  // --- HANDLER FUNCTIONS ---
-
-  const handleInputChange = (e) => {
+  const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    if (editingProject) {
-      setEditingProject(prev => ({ ...prev, [name]: value }));
-    } else {
+    if (showAddModal) {
       setNewProject(prev => ({ ...prev, [name]: value }));
+    } else if (showEditModal) {
+      setEditingProject(prev => ({ ...prev, [name]: value }));
     }
-  };
-  
-  const handleImageChange = (e) => {
-    setProjectImage(e.target.files[0]);
-  };
+  }, [showAddModal, showEditModal]); // Dependencies for handleInputChange
 
-  const handleAddProject = async (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    Object.keys(newProject).forEach(key => formData.append(key, newProject[key]));
-    if (projectImage) formData.append('projectImage', projectImage);
-    await fetch(`${process.env.REACT_APP_API_URL}/api/projects`, {
-      method: 'POST',
-      headers: { 'x-auth-token': token },
-      body: formData
-    });
+  const handleImageChange = useCallback((e) => {
+    setProjectImage(e.target.files[0]);
+  }, []); // No dependencies for handleImageChange
+
+  const handleCloseModals = useCallback(() => {
     setShowAddModal(false);
+    setShowEditModal(false);
+    setEditingProject(null);
     setNewProject({ title: '', description: '', status: 'Planning', clientId: '' });
     setProjectImage(null);
-    fetchData();
-  };
-  
-  const openEditModal = (project) => {
-    setEditingProject(project);
-    setShowEditModal(true);
-  };
-  
-  const handleUpdateProject = async (e) => {
+    setError(''); // Clear any internal errors
+  }, []); // No dependencies for handleCloseModals
+
+  const handleAddProject = useCallback(async (e) => {
     e.preventDefault();
+    setError('');
+    const formData = new FormData();
+    formData.append('title', newProject.title);
+    formData.append('description', newProject.description);
+    formData.append('status', newProject.status);
+    formData.append('clientId', newProject.clientId);
+    if (projectImage) {
+      formData.append('projectImage', projectImage);
+    }
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/projects`, {
+        method: 'POST',
+        headers: { 'x-auth-token': token },
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.msg || 'Failed to add project');
+      }
+      handleCloseModals();
+      fetchData();
+    } catch (err) {
+      console.error("Error adding project:", err);
+      setError(err.message || 'Error adding project.');
+    }
+  }, [newProject, projectImage, token, handleCloseModals, fetchData]); // Dependencies for handleAddProject
+
+  const handleUpdateProject = useCallback(async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!editingProject) return;
+
     const formData = new FormData();
     formData.append('title', editingProject.title);
     formData.append('description', editingProject.description);
     formData.append('status', editingProject.status);
-    formData.append('clientId', editingProject.clientId._id || editingProject.clientId);
-    if (projectImage) formData.append('projectImage', projectImage);
-    await fetch(`${process.env.REACT_APP_API_URL}/api/projects/${editingProject._id}`, {
-      method: 'PUT',
-      headers: { 'x-auth-token': token },
-      body: formData
-    });
-    setShowEditModal(false);
-    setEditingProject(null);
-    setProjectImage(null);
-    fetchData();
-  };
-
-  const handleDeleteProject = async (projectId) => {
-    if (window.confirm('Are you sure you want to delete this project?')) {
-      await fetch(`${process.env.REACT_APP_API_URL}/api/projects/${projectId}`, {
-        method: 'DELETE',
-        headers: { 'x-auth-token': token }
-      });
-      fetchData();
+    formData.append('clientId', editingProject.clientId._id || editingProject.clientId); // Ensure clientId is ID
+    if (projectImage) {
+      formData.append('projectImage', projectImage);
     }
-  };
-  
-  const handleToggleFeature = async (projectId) => {
-    setError('');
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/projects/${projectId}/toggle-feature`, {
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/projects/${editingProject._id}`, {
         method: 'PUT',
-        headers: { 'x-auth-token': token }
-    });
-    if (!response.ok) {
-        const errData = await response.json();
-        setError(errData.msg);
-    } else {
-        fetchData();
+        headers: { 'x-auth-token': token },
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.msg || 'Failed to update project');
+      }
+      handleCloseModals();
+      fetchData();
+    } catch (err) {
+      console.error("Error updating project:", err);
+      setError(err.message || 'Error updating project.');
     }
-  };
+  }, [editingProject, projectImage, token, handleCloseModals, fetchData]); // Dependencies for handleUpdateProject
 
-  // --- RENDER LOGIC ---
+  const handleDeleteProject = useCallback(async (id) => {
+    if (!window.confirm('Are you sure you want to delete this project?')) return;
+    setError('');
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/projects/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-auth-token': token },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.msg || 'Failed to delete project');
+      }
+      fetchData();
+    } catch (err) {
+      console.error("Error deleting project:", err);
+      setError(err.message || 'Error deleting project.');
+    }
+  }, [token, fetchData]); // Dependencies for handleDeleteProject
 
-  if (isLoading) return <div>Loading projects...</div>;
+  if (isLoading) return <div className="loading-message">Loading projects...</div>;
+  if (error) return <div className="error-message">Error: {error}</div>;
 
-  if (selectedProject) {
-    return <ProjectDetail project={selectedProject} token={token} onBack={() => setSelectedProject(null)} />;
-  }
-
-  const featuredCount = projects.filter(p => p.isFeatured).length;
 
   return (
-    <div>
+    <div className="projects-page">
       <div className="page-header">
-        <div className="page-title-group">
-          <h1 className="page-title">Projects</h1>
-          <span className="featured-count-indicator">
-            {featuredCount} / 5 Featured
-          </span>
-        </div>
-        <button className="add-button" onClick={() => { setNewProject({ title: '', description: '', status: 'Planning', clientId: '' }); setShowAddModal(true); }}>+ Add Project</button>
+        <h1 className="page-title">Manage Projects</h1>
+        <button className="add-button" onClick={() => setShowAddModal(true)}>+ Add Project</button>
       </div>
-      
-      {error && <div className="error-banner">Error: {error}</div>}
-      
+
       <div className="data-table-container">
         <table>
           <thead>
-            <tr><th>Title</th><th>Client</th><th>Status</th><th>Featured</th><th>Comments</th><th>Actions</th></tr>
+            <tr>
+              <th>Title</th>
+              <th>Client</th>
+              <th>Status</th>
+              <th>Comments</th>
+              <th>Actions</th>
+            </tr>
           </thead>
           <tbody>
-            {projects && projects.length > 0 ? (
-                projects.map(project => (
-                  <tr key={project._id}>
-                    <td><button onClick={() => setSelectedProject(project)} className="project-link-button">{project.title}</button></td>
-                    <td>{project.clientId?.name || 'N/A'}</td>
-                    <td>{project.status}</td>
-                    <td>{project.isFeatured ? 'Yes' : 'No'}</td>
-                    <td>{project.commentCount}</td>
-                    <td className="actions-cell">
-                      <button className="edit-button" onClick={() => openEditModal(project)}>Edit</button>
-                      <button className="delete-button" onClick={() => handleDeleteProject(project._id)}>Delete</button>
-                      <button className="feature-button" onClick={() => handleToggleFeature(project._id)}>{project.isFeatured ? 'Un-feature' : 'Feature'}</button>
-                    </td>
-                  </tr>
-                ))
+            {projects.length > 0 ? (
+              projects.map(project => (
+                <tr key={project._id}>
+                  <td>
+                    {/* DEBUGGING NOTE: Check console for project._id value right before this link */}
+                    <Link to={`/projects/${project._id}`} className="project-title-link">{project.title}</Link>
+                  </td>
+                  <td>{project.client ? project.client.name : 'N/A'}</td> {/* Display client company name */}
+                  <td>{project.status}</td>
+                  <td>{project.commentCount || 0}</td>
+                  <td className="actions-cell">
+                    <button className="edit-button" onClick={() => { setSelectedProject(project); setShowEditModal(true); }}>Edit</button>
+                    <button className="delete-button" onClick={() => handleDeleteProject(project._id)}>Delete</button>
+                  </td>
+                </tr>
+              ))
             ) : (
-                <tr><td colSpan="6">No projects found. Try adding one!</td></tr>
+              <tr>
+                <td colSpan="5">No projects found.</td>
+              </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Add & Edit Modals (no changes needed here) */}
+      {/* Add Project Modal */}
       {showAddModal && (
         <div className="modal-backdrop">
           <div className="modal-content">
-            <div className="modal-header"><h2 className="modal-title">Add New Project</h2><button className="close-button" onClick={() => setShowAddModal(false)}>&times;</button></div>
+            <div className="modal-header"><h2 className="modal-title">Add New Project</h2><button className="close-button" onClick={handleCloseModals}>&times;</button></div>
+            {error && <div className="error-message">{error}</div>}
             <form onSubmit={handleAddProject}>
               <div className="form-group"><label>Title</label><input type="text" name="title" value={newProject.title} onChange={handleInputChange} required /></div>
-              <div className="form-group"><label>Client</label><select name="clientId" value={newProject.clientId} onChange={handleInputChange} required><option value="">Select a Client</option>{clients.map(client => (<option key={client._id} value={client._id}>{client.name}</option>))}</select></div>
+              <div className="form-group">
+                <label>Client</label>
+                <select name="clientId" value={newProject.clientId} onChange={handleInputChange} required>
+                  <option value="">Select a Client</option>
+                  {clients.map(client => (
+                    <option key={client._id} value={client._id}>{client.name}</option>
+                  ))}
+                </select>
+              </div>
               <div className="form-group"><label>Description</label><textarea name="description" rows="3" value={newProject.description} onChange={handleInputChange}></textarea></div>
-              <div className="form-group"><label>Status</label><select name="status" value={newProject.status} onChange={handleInputChange}><option>Planning</option><option>In Progress</option><option>Pending Review</option><option>Completed</option></select></div>
+              <div className="form-group">
+                <label>Status</label>
+                <select name="status" value={newProject.status} onChange={handleInputChange}>
+                  <option>Planning</option><option>In Progress</option><option>Pending Review</option><option>Completed</option>
+                </select>
+              </div>
               <div className="form-group"><label>Project Image</label><input type="file" name="projectImage" onChange={handleImageChange} /></div>
-              <button type="submit" className="add-button">Save Project</button>
+              <button type="submit" className="add-button">Create Project</button>
             </form>
           </div>
         </div>
       )}
 
+      {/* Edit Project Modal */}
       {showEditModal && editingProject && (
         <div className="modal-backdrop">
           <div className="modal-content">
-            <div className="modal-header"><h2 className="modal-title">Edit Project</h2><button className="close-button" onClick={() => { setShowEditModal(false); setEditingProject(null); }}>&times;</button></div>
+            <div className="modal-header"><h2 className="modal-title">Edit Project</h2><button className="close-button" onClick={handleCloseModals}>&times;</button></div>
+            {error && <div className="error-message">{error}</div>}
             <form onSubmit={handleUpdateProject}>
               <div className="form-group"><label>Title</label><input type="text" name="title" value={editingProject.title} onChange={handleInputChange} required /></div>
-              <div className="form-group"><label>Client</label><select name="clientId" value={editingProject.clientId?._id} onChange={handleInputChange} required><option value="">Select a Client</option>{clients.map(client => (<option key={client._id} value={client._id}>{client.name}</option>))}</select></div>
+              <div className="form-group">
+                <label>Client</label>
+                <select name="clientId" value={editingProject.clientId?._id || ''} onChange={handleInputChange} required>
+                  <option value="">Select a Client</option>
+                  {clients.map(client => (
+                    <option key={client._id} value={client._id}>{client.name}</option>
+                  ))}
+                </select>
+              </div>
               <div className="form-group"><label>Description</label><textarea name="description" rows="3" value={editingProject.description} onChange={handleInputChange}></textarea></div>
-              <div className="form-group"><label>Status</label><select name="status" value={editingProject.status} onChange={handleInputChange}><option>Planning</option><option>In Progress</option><option>Pending Review</option><option>Completed</option></select></div>
+              <div className="form-group">
+                <label>Status</label>
+                <select name="status" value={editingProject.status} onChange={handleInputChange}>
+                  <option>Planning</option><option>In Progress</option><option>Pending Review</option><option>Completed</option>
+                </select>
+              </div>
               <div className="form-group"><label>Update Project Image</label><input type="file" name="projectImage" onChange={handleImageChange} /></div>
               <button type="submit" className="add-button">Update Project</button>
             </form>
