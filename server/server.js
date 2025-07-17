@@ -141,7 +141,7 @@ app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, re
             new Notification({ recipient: ceo._id, message, link: `/users` }).save();
         }
 
-        res.status(201).send('User registered successfully');
+        res.status(201).json({ msg: 'User registered successfully', userId: user._id });
     } catch (err) { res.status(500).send('Server error'); }
 });
 
