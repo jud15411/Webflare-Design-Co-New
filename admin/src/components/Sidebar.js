@@ -1,15 +1,14 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom'; // Import NavLink
+import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
 import Notifications from './Notifications';
 
-// The onLogout prop is now used to handle logging out
 function Sidebar({ user, onLogout }) {
   
-  // Check for CEO/CTO level admin access
   const isAdmin = user && ['CEO', 'CTO'].includes(user.role);
-  // Check for CEO-only access
   const isCeo = user && user.role === 'CEO';
+  // ** NEW: Check for Sales role **
+  const isSales = user && user.role === 'Sales';
 
   return (
     <aside className="sidebar">
@@ -22,10 +21,12 @@ function Sidebar({ user, onLogout }) {
           {/* Links for All Users */}
           <li><NavLink to="/dashboard">Dashboard</NavLink></li>
           <li><NavLink to="/projects">Projects</NavLink></li>
-          <li><NavLink to="/tasks">Tasks</NavLink></li>
           
-          {/* Admin (CEO & CTO) Links */}
-          {isAdmin && (
+          {/* Show Tasks only if NOT a salesperson */}
+          {!isSales && <li><NavLink to="/tasks">Tasks</NavLink></li>}
+          
+          {/* Links for Admin (CEO/CTO) & Sales */}
+          {(isAdmin || isSales) && (
             <>
               <li><NavLink to="/clients">Clients</NavLink></li>
               <li><NavLink to="/invoices">Invoices</NavLink></li>

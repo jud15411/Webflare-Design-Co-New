@@ -74,8 +74,9 @@ const authMiddleware = (req, res, next) => {
 
 const adminOnlyMiddleware = (req, res, next) => {
     const userRole = req.userRole ? req.userRole.trim().toUpperCase() : '';
-    if (!['CEO', 'CTO'].includes(userRole)) {
-        return res.status(403).json({ msg: 'Access denied. Admin privileges required.' });
+    // ** UPDATED to include SALES role **
+    if (!['CEO', 'CTO', 'SALES'].includes(userRole)) {
+        return res.status(403).json({ msg: 'Access denied. Privileges required.' });
     }
     next();
 };
@@ -116,8 +117,18 @@ app.get('/api/auth/user', authMiddleware, async (req, res) => {
 app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
+        
+        // ** NEW: Enforce role limits on creation **
+        if (role === 'CEO' || role === 'CTO') {
+            const existingRoleHolder = await User.findOne({ role: role });
+            if (existingRoleHolder) {
+                return res.status(400).json({ msg: `A user with the role ${role} already exists. Only one is allowed.` });
+            }
+        }
+
         let user = await User.findOne({ email });
         if (user) return res.status(400).json({ msg: 'User already exists' });
+        
         user = new User({ name, email, password, role });
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(password, salt);
@@ -132,7 +143,7 @@ app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, re
 
         res.status(201).send('User registered successfully');
     } catch (err) { res.status(500).send('Server error'); }
-}); // <-- The missing brace was here
+});
 
 app.get('/api/users', authMiddleware, adminOnlyMiddleware, async (req, res) => {
     try {
@@ -140,9 +151,19 @@ app.get('/api/users', authMiddleware, adminOnlyMiddleware, async (req, res) => {
         res.json(users);
     } catch (err) { res.status(500).send('Server error'); }
 });
+
 app.put('/api/users/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
     try {
         const { name, email, role } = req.body;
+
+        // ** NEW: Enforce role limits on update **
+        if (role === 'CEO' || role === 'CTO') {
+            const existingRoleHolder = await User.findOne({ role: role, _id: { $ne: req.params.id } });
+            if (existingRoleHolder) {
+                return res.status(400).json({ msg: `A user with the role ${role} already exists. Only one is allowed.` });
+            }
+        }
+
         const updatedUser = await User.findByIdAndUpdate(
             req.params.id, 
             { name, email, role }, 
@@ -158,10 +179,8 @@ app.put('/api/users/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) =>
     }
 });
 
-// DELETE a user
 app.delete('/api/users/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
     try {
-        // Prevent a user from deleting their own account
         if (req.params.id === req.userId) {
             return res.status(400).json({ msg: 'You cannot delete your own account.' });
         }
@@ -319,7 +338,8 @@ app.put('/api/clients/:id', authMiddleware, adminOnlyMiddleware, async (req, res
 app.delete('/api/clients/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Client.findByIdAndDelete(req.params.id)));
 
 app.get('/api/tasks', authMiddleware, async (req, res) => {
-    const query = (req.userRole.toUpperCase() === 'CEO') ? {} : { assignedTo: req.userId };
+    const userRole = req.userRole ? req.userRole.trim().toUpperCase() : '';
+    const query = (userRole === 'CEO') ? {} : { assignedTo: req.userId };
     res.json(await Task.find(query).populate({ path: 'projectId', select: 'title' }).populate({ path: 'assignedTo', select: 'name' }));
 });
 
