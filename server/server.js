@@ -7,16 +7,17 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const crypto = require('crypto'); // Added for token generation
+const nodemailer = require('nodemailer'); // Added for sending emails
 
 // --- Read Environment Variables ---
 const JWT_SECRET = process.env.JWT_SECRET;
 const MONGO_URI = process.env.MONGO_URI;
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASS = process.env.EMAIL_PASS;
+const EMAIL_USER = process.env.EMAIL_USER; // Added for Gmail authentication
+const EMAIL_PASS = process.env.EMAIL_PASS; // Added for Gmail authentication
 // Define your production URL here, e.g., 'https://www.yourdomain.com'
-const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:${process.env.PORT || 8080}`;
+// This is used for constructing the email verification link that redirects to your frontend
+const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:${process.env.PORT || 8080}`; // Added for dynamic client URL
 
 
 // --- Initialize App & Models ---
@@ -96,7 +97,7 @@ const ceoOnlyMiddleware = (req, res, next) => {
     next();
 };
 
-// Helper function to send verification email
+// Helper function to send verification email (New addition)
 const sendVerificationEmail = async (user) => {
     const transporter = nodemailer.createTransport({
         service: 'gmail',
@@ -106,7 +107,7 @@ const sendVerificationEmail = async (user) => {
         }
     });
 
-    const verificationLink = `${CLIENT_URL}/api/auth/verify-email?token=${user.emailVerificationToken}`; // Use CLIENT_URL here
+    const verificationLink = `${CLIENT_URL}/api/auth/verify-email?token=${user.emailVerificationToken}`; // Uses CLIENT_URL
 
     const mailOptions = {
         from: EMAIL_USER,
@@ -128,7 +129,7 @@ const sendVerificationEmail = async (user) => {
         console.log('Verification email sent to:', user.email);
     } catch (error) {
         console.error('Error sending verification email:', error);
-        throw new Error('Failed to send verification email.');
+        throw new Error('Failed to send verification email.'); // Rethrow to be caught by route handler
     }
 };
 
@@ -142,9 +143,9 @@ app.post('/api/auth/login', async (req, res) => {
         const user = await User.findOne({ email });
         if (!user) return res.status(400).json({ msg: 'Invalid credentials' });
         
-        // Check if email is verified
+        // Check if email is verified (Updated)
         if (!user.isEmailVerified) {
-            // Updated response to indicate unverified email for frontend action
+            // Send specific error code for frontend to show resend option
             return res.status(401).json({ msg: 'Please verify your email to log in.', errorCode: 'EMAIL_NOT_VERIFIED', email: user.email });
         }
 
@@ -170,6 +171,7 @@ app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, re
     try {
         const { name, email, password, role } = req.body;
         
+        // ** NEW: Enforce role limits on creation **
         if (role === 'CEO' || role === 'CTO') {
             const existingRoleHolder = await User.findOne({ role: role });
             if (existingRoleHolder) {
@@ -180,14 +182,14 @@ app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, re
         let user = await User.findOne({ email });
         if (user) return res.status(400).json({ msg: 'User already exists' });
         
-        const emailVerificationToken = crypto.randomBytes(20).toString('hex');
+        const emailVerificationToken = crypto.randomBytes(20).toString('hex'); // Token generation
 
-        user = new User({ name, email, password, role, emailVerificationToken });
+        user = new User({ name, email, password, role, emailVerificationToken }); // Store token
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(password, salt);
         await user.save();
         
-        await sendVerificationEmail(user); // Call the helper function
+        await sendVerificationEmail(user); // Send verification email
 
         const ceo = await User.findOne({ role: 'CEO' });
         const creator = await User.findById(req.userId);
@@ -200,7 +202,7 @@ app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, re
     } catch (err) { res.status(500).send('Server error'); }
 });
 
-// NEW: Resend Email Verification Route
+// NEW: Resend Email Verification Route (Added)
 app.post('/api/auth/resend-verification', async (req, res) => {
     try {
         const { email } = req.body;
@@ -228,6 +230,30 @@ app.post('/api/auth/resend-verification', async (req, res) => {
 });
 
 
+// Email verification route (Updated to redirect)
+app.get('/api/auth/verify-email', async (req, res) => {
+    try {
+        const { token } = req.query;
+        const user = await User.findOne({ emailVerificationToken: token });
+
+        if (!user) {
+            // Redirect to login with an error indicator if token is invalid/expired
+            return res.redirect(`${CLIENT_URL}/login?verificationStatus=failed&message=${encodeURIComponent('Invalid or expired verification token.')}`);
+        }
+
+        user.isEmailVerified = true;
+        user.emailVerificationToken = undefined; // Clear the token after verification
+        await user.save();
+
+        // Redirect to login page with a success indicator
+        return res.redirect(`${CLIENT_URL}/login?verificationStatus=success&email=${encodeURIComponent(user.email)}`);
+    } catch (err) {
+        console.error('Email verification error:', err);
+        // Redirect to login with a server error indicator
+        return res.redirect(`${CLIENT_URL}/login?verificationStatus=error&message=${encodeURIComponent('Server error during email verification.')}`);
+    }
+});
+
 app.get('/api/users', authMiddleware, adminOnlyMiddleware, async (req, res) => {
     try {
         const users = await User.find().select('-password');
@@ -239,6 +265,7 @@ app.put('/api/users/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) =>
     try {
         const { name, email, role } = req.body;
 
+        // ** NEW: Enforce role limits on update **
         if (role === 'CEO' || role === 'CTO') {
             const existingRoleHolder = await User.findOne({ role: role, _id: { $ne: req.params.id } });
             if (existingRoleHolder) {
@@ -473,7 +500,7 @@ app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
 app.post('/api/tasks/:taskId/time', authMiddleware, async (req, res) => {
     try {
         const { hours, description } = req.body;
-        const task = await Task.findById(req.params.taskId);
+        const task = await Task.findById(task.projectId);
         if (!task) return res.status(404).json({ msg: 'Task not found' });
         const newTimeEntry = new TimeEntry({ hours, description, user: req.userId, task: req.params.taskId, project: task.projectId });
         await newTimeEntry.save();

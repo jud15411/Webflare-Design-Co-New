@@ -116,3 +116,9 @@
   margin-bottom: 15px;
   font-size: 0.9em;
 }
+
+.success-message {
+  color: #4CAF50; /* Green color for success messages */
+  margin-bottom: 15px;
+  font-size: 0.9em;
+}
