@@ -25,6 +25,7 @@ const Service = require('./models/Service');
 const Comment = require('./models/Comment');
 const TimeEntry = require('./models/TimeEntry');
 const Notification = require('./models/Notification');
+const Counter = require('./models/Counter');
 
 // --- Middleware ---
 app.use(cors());
@@ -281,7 +282,32 @@ app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
 
 // INVOICES
 app.get('/api/invoices', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Invoice.find().populate({ path: 'projectId', populate: { path: 'clientId' } })));
-app.post('/api/invoices', authMiddleware, adminOnlyMiddleware, async (req, res) => res.status(201).json(await new Invoice(req.body).save()));
+app.post('/api/invoices', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        // Find the counter for invoices and increment it
+        const counter = await Counter.findOneAndUpdate(
+            { _id: 'invoiceNumber' },
+            { $inc: { sequence_value: 1 } },
+            { new: true, upsert: true } // Create the counter if it doesn't exist
+        );
+
+        // Format the new invoice number
+        const newInvoiceNumber = `WDC-${String(counter.sequence_value).padStart(4, '0')}`;
+
+        // Create the new invoice with the generated number
+        const newInvoice = new Invoice({
+            ...req.body,
+            invoiceNumber: newInvoiceNumber
+        });
+
+        await newInvoice.save();
+        res.status(201).json(newInvoice);
+
+    } catch (err) {
+        console.error("Error creating invoice:", err);
+        res.status(500).send('Server Error');
+    }
+});
 app.put('/api/invoices/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Invoice.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/invoices/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Invoice.findByIdAndDelete(req.params.id)));
 

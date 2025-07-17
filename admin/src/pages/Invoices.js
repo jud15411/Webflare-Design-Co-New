@@ -120,7 +120,7 @@ function Invoices() {
           <div className="modal-content">
             <div className="modal-header"><h2 className="modal-title">{showEditModal ? 'Edit Invoice' : 'Add New Invoice'}</h2><button className="close-button" onClick={() => { setShowAddModal(false); setShowEditModal(false); }}>&times;</button></div>
             <form onSubmit={showEditModal ? handleUpdateInvoice : handleAddInvoice}>
-              <div className="form-group"><label>Invoice Number</label><input type="text" name="invoiceNumber" value={showEditModal ? editingInvoice.invoiceNumber : newInvoice.invoiceNumber} onChange={handleInputChange} required /></div>
+              <div className="form-group"><label>Invoice Number</label><input type="text" name="invoiceNumber" value={editingInvoice.invoiceNumber} readOnly /></div>
               <div className="form-group"><label>Project</label><select name="projectId" value={showEditModal ? editingInvoice.projectId._id : newInvoice.projectId} onChange={handleInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
               <div className="form-group"><label>Amount ($)</label><input type="number" name="amount" value={showEditModal ? editingInvoice.amount : newInvoice.amount} onChange={handleInputChange} required /></div>
               <div className="form-group"><label>Due Date</label><input type="date" name="dueDate" value={showEditModal ? editingInvoice.dueDate : newInvoice.dueDate} onChange={handleInputChange} required /></div>
