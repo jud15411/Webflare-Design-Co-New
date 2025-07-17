@@ -9,7 +9,6 @@ import './Tasks.css';
 const TaskCard = ({ task, onEdit }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task._id });
   const style = { transform: CSS.Transform.toString(transform), transition };
-
   return (
     <div className="task-card" ref={setNodeRef} style={style}>
         <div className="drag-handle" {...attributes} {...listeners}>
@@ -28,7 +27,6 @@ const TaskCard = ({ task, onEdit }) => {
 // Droppable Column Component
 const TaskColumn = ({ id, title, tasks, onEdit }) => {
   const { setNodeRef } = useSortable({ id });
-
   return (
     <div className="task-column">
       <h2>{title} ({tasks.length})</h2>
@@ -47,6 +45,7 @@ function Tasks() {
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -58,20 +57,28 @@ function Tasks() {
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
+    setError('');
     try {
         const [tasksRes, projectsRes, usersRes] = await Promise.all([
             fetch(`${process.env.REACT_APP_API_URL}/api/tasks`, { headers: { 'x-auth-token': token } }),
             fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
             fetch(`${process.env.REACT_APP_API_URL}/api/users`, { headers: { 'x-auth-token': token } })
         ]);
+
+        if (!tasksRes.ok || !projectsRes.ok || !usersRes.ok) {
+            throw new Error('A network error occurred while fetching data.');
+        }
+
         const tasksData = await tasksRes.json();
         const projectsData = await projectsRes.json();
         const usersData = await usersRes.json();
+
         setTasks(tasksData);
         setProjects(projectsData);
         setUsers(usersData);
     } catch (err) {
         console.error("Failed to fetch data:", err);
+        setError(err.message);
     } finally {
         setIsLoading(false);
     }
@@ -104,12 +111,9 @@ function Tasks() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    // This part handles the Edit Modal
     if (editingTask) {
         setEditingTask({ ...editingTask, [name]: value });
-    } 
-    // This else block handles the Add Modal
-    else {
+    } else {
         setNewTask({ ...newTask, [name]: value });
     }
   };
@@ -147,6 +151,7 @@ function Tasks() {
   const tasksByColumn = (columnName) => tasks.filter(task => task.status && task.status.trim() === columnName);
 
   if (isLoading) return <div>Loading tasks...</div>;
+  if (error) return <div style={{ color: 'red', padding: '20px' }}>Error: {error}</div>;
 
   return (
     <div>
