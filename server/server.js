@@ -140,6 +140,41 @@ app.get('/api/users', authMiddleware, adminOnlyMiddleware, async (req, res) => {
         res.json(users);
     } catch (err) { res.status(500).send('Server error'); }
 });
+app.put('/api/users/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
+    try {
+        const { name, email, role } = req.body;
+        const updatedUser = await User.findByIdAndUpdate(
+            req.params.id, 
+            { name, email, role }, 
+            { new: true }
+        ).select('-password');
+
+        if (!updatedUser) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        res.json(updatedUser);
+    } catch (err) {
+        res.status(500).send('Server error');
+    }
+});
+
+// DELETE a user
+app.delete('/api/users/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
+    try {
+        // Prevent a user from deleting their own account
+        if (req.params.id === req.userId) {
+            return res.status(400).json({ msg: 'You cannot delete your own account.' });
+        }
+        
+        const user = await User.findByIdAndDelete(req.params.id);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        res.json({ msg: 'User deleted successfully' });
+    } catch (err) {
+        res.status(500).send('Server error');
+    }
+});
 
 
 // == PROJECTS ==
