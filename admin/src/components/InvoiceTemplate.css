@@ -27,12 +27,42 @@
 .invoice-table { width: 100%; border-collapse: collapse; }
 .invoice-table th, .invoice-table td { border: 1px solid #eee; padding: 12px; text-align: left; }
 .invoice-table thead { background-color: #f9f9f9; }
-.invoice-table tfoot .total-label { text-align: right; font-weight: bold; border: none; }
-.invoice-table tfoot .total-amount { font-weight: bold; font-size: 1.2em; background-color: #f9f9f9; }
+.invoice-table tfoot td { font-weight: bold; }
+.invoice-table .total-label { text-align: right; }
+.invoice-table .total-amount { text-align: right; background-color: #e0e0e0; }
 
-.invoice-footer { margin-top: 50px; text-align: center; color: #777; font-size: 0.9em; border-top: 1px solid #eee; padding-top: 20px; }
+.invoice-footer {
+  text-align: center;
+  margin-top: 50px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+  font-size: 0.9em;
+  color: #777;
+}
 
-/* This class hides the template when not printing */
+/* Hide elements not intended for print (e.g., control buttons, unnecessary navigation) */
+@media print {
+  body * { visibility: hidden; }
+  .invoice-wrapper, .invoice-wrapper * { visibility: visible; }
+  .invoice-wrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+  }
+  /* You may need to adjust other elements to fit the print layout */
+}
+
+/* This class hides the content on the screen that's meant for printing only */
 .hidden-for-print {
-  display: none;
+  position: absolute;
+  left: -9999px; /* Off-screen */
+  top: -9999px;
+  z-index: -1; /* Ensure it's behind everything */
+  opacity: 0; /* Make it completely transparent */
+  /* Remove display: none; or visibility: hidden; here if they prevent html2canvas capture */
 }

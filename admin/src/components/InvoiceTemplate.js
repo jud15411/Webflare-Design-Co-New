@@ -1,5 +1,6 @@
+// InvoiceTemplate.js (Your existing file - no changes needed for this transition)
 import React from 'react';
-import './InvoiceTemplate.css';
+import './InvoiceTemplate.css'; // This CSS is crucial for the visual output
 
 const InvoiceTemplate = React.forwardRef(({ invoice }, ref) => {
   if (!invoice) {
@@ -11,9 +12,10 @@ const InvoiceTemplate = React.forwardRef(({ invoice }, ref) => {
   const project = invoice.projectId;
   
   return (
-    <div ref={ref} className="invoice-wrapper">
+    <div ref={ref} className="invoice-wrapper"> {/* The ref is attached to this div */}
       <header className="invoice-header">
         <div className="logo-container">
+          {/* Ensure this image path is accessible when deployed */}
           <img src="/images/Webflare_Design_Co.webp" alt="Webflare Design Co. Logo" className="invoice-logo" />
           <h1>Webflare Design Co.</h1>
         </div>
@@ -49,13 +51,13 @@ const InvoiceTemplate = React.forwardRef(({ invoice }, ref) => {
         <tbody>
           <tr>
             <td>{project?.title}</td>
-            <td>${invoice.amount?.toFixed(2)}</td>
+            <td>${invoice.amount ? invoice.amount.toFixed(2) : '0.00'}</td>
           </tr>
         </tbody>
         <tfoot>
           <tr>
             <td className="total-label">Total</td>
-            <td className="total-amount">${invoice.amount?.toFixed(2)}</td>
+            <td className="total-amount">${invoice.amount ? invoice.amount.toFixed(2) : '0.00'}</td>
           </tr>
         </tfoot>
       </table>

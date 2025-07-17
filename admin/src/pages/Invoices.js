@@ -1,8 +1,9 @@
 // jud15411/webflare-design-co-new/Webflare-Design-Co-New-2100d7f30c3a6542772817c09db5f1d9a53ddf69/admin/src/pages/Invoices.js
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useReactToPrint } from 'react-to-print';
-import InvoiceTemplate from '../components/InvoiceTemplate';
+import html2canvas from 'html2canvas'; // NEW Import: Import html2canvas
+import { jsPDF } from 'jspdf';     // NEW Import: Import jsPDF
+import InvoiceTemplate from '../components/InvoiceTemplate'; // Your existing InvoiceTemplate
 import './Shared.css';
 
 function Invoices() {
@@ -12,25 +13,10 @@ function Invoices() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [newInvoice, setNewInvoice] = useState({ amount: 0, dueDate: '', projectId: '', status: 'Draft' });
-  const [invoiceToPrint, setInvoiceToPrint] = useState(null); // The invoice data to be printed
+  const [invoiceToPrint, setInvoiceToPrint] = useState(null); // State to hold the invoice data for the template
 
   const token = localStorage.getItem('token');
-  const componentRef = useRef(); // Ref attached to the InvoiceTemplate
-
-  // NEW: Memoize the content function to ensure stability and up-to-date ref value
-  const getPrintContent = useCallback(() => {
-    // This log confirms what the ref contains at the exact moment react-to-print needs it.
-    console.log('getPrintContent called. Current ref inside content getter:', componentRef.current);
-    return componentRef.current;
-  }, [componentRef.current]); // KEY CHANGE: Add componentRef.current as a dependency
-
-  const handlePrint = useReactToPrint({
-    content: getPrintContent, // Use the memoized content getter
-    onAfterPrint: () => {
-      console.log('After print, clearing invoiceToPrint.');
-      setInvoiceToPrint(null); // Clear the invoiceToPrint state after printing
-    },
-  });
+  const componentRef = useRef(); // Ref attached to the InvoiceTemplate to capture its content
 
   const fetchData = useCallback(async () => {
     const [invoicesRes, projectsRes] = await Promise.all([
@@ -47,25 +33,61 @@ function Invoices() {
     fetchData();
   }, [fetchData]);
 
-  // Trigger print effect only when invoiceToPrint changes to a non-null value
+  // NEW: useEffect to handle PDF generation when invoiceToPrint state changes
   useEffect(() => {
-    if (invoiceToPrint) { // Only trigger if invoiceToPrint has data
-      console.log('useEffect triggered: invoiceToPrint is set.');
-      // Add a slight delay to ensure React has fully rendered the InvoiceTemplate
-      // and attached the ref before handlePrint attempts to use it.
-      const timer = setTimeout(() => {
-        // This log at line 58 should confirm ref validity before handlePrint() is triggered.
-        if (componentRef.current) {
-          console.log('Timeout fired. Ref is valid, calling handlePrint.');
-          handlePrint(); // This line is Invoices.js:59
-        } else {
-          console.error('Timeout fired. Ref is still null. InvoiceTemplate may not have mounted or a re-render unmounted it.');
-        }
-      }, 100); // Increased delay slightly to 100ms for more robustness
+    if (invoiceToPrint && componentRef.current) {
+      console.log('Invoice data ready for PDF generation and ref is available:', invoiceToPrint);
 
-      return () => clearTimeout(timer); // Cleanup the timeout if the component unmounts or state changes
+      // Add a sufficient delay to ensure all content (especially images) in the template is rendered
+      const timer = setTimeout(async () => {
+        try {
+          const element = componentRef.current; // The DOM element to capture
+          console.log('Starting html2canvas capture of element:', element);
+
+          // Use html2canvas to capture the content of the InvoiceTemplate
+          const canvas = await html2canvas(element, {
+            scale: 2, // Scale up for better resolution in the PDF
+            useCORS: true, // Important if your logo or other images are from a different origin
+            logging: true // Enable logging from html2canvas for debugging
+          });
+          console.log('html2canvas captured canvas:', canvas);
+
+          const imgData = canvas.toDataURL('image/jpeg', 1.0); // Convert canvas to JPEG image data (quality 1.0)
+          const pdf = new jsPDF('p', 'mm', 'a4'); // Initialize jsPDF: portrait, millimeters, A4 size
+
+          const imgWidth = 210; // A4 width in mm
+          const pageHeight = 297; // A4 height in mm
+          const imgHeight = canvas.height * imgWidth / canvas.width; // Calculate image height to maintain aspect ratio
+          let heightLeft = imgHeight; // Remaining height to be added to PDF
+
+          let position = 0; // Current Y position on the PDF page
+
+          // Add the first page
+          pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+
+          // Add subsequent pages if content overflows (for long invoices)
+          while (heightLeft >= 0) {
+            position = heightLeft - imgHeight; // Calculate position for the next page
+            pdf.addPage(); // Add a new page
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+          }
+
+          pdf.save(`invoice_${invoiceToPrint.invoiceNumber}.pdf`); // Save the generated PDF file
+
+          console.log('PDF generated and saved.');
+          setInvoiceToPrint(null); // Clear the state after successful PDF generation
+        } catch (error) {
+          console.error('Error generating PDF:', error);
+          alert('Failed to generate PDF. Please check the console for more details.');
+          setInvoiceToPrint(null); // Clear state even on error to allow retries
+        }
+      }, 500); // 500ms delay to ensure all elements (especially images) are loaded before capture
+
+      return () => clearTimeout(timer); // Cleanup function for the timeout to prevent memory leaks
     }
-  }, [invoiceToPrint, handlePrint]); // Dependencies: re-run when invoiceToPrint or handlePrint changes
+  }, [invoiceToPrint]); // Dependency array: this effect runs when invoiceToPrint changes
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -119,9 +141,10 @@ function Invoices() {
     }
   };
   
+  // This function now just sets the invoice data to the state, which triggers the useEffect for PDF generation
   const triggerPrint = (invoice) => {
-    console.log('Triggering print for invoice:', invoice);
-    setInvoiceToPrint(invoice); // This will trigger the useEffect
+    console.log('Triggering PDF generation for invoice:', invoice);
+    setInvoiceToPrint(invoice);
   };
 
   return (
@@ -155,7 +178,7 @@ function Invoices() {
                 <td className="actions-cell">
                   <button className="edit-button" onClick={() => openEditModal(invoice)}>Edit</button>
                   <button className="delete-button" onClick={() => handleDeleteInvoice(invoice._id)}>Delete</button>
-                  <button onClick={() => triggerPrint(invoice)}>Print</button>
+                  <button onClick={() => triggerPrint(invoice)}>Print PDF</button> {/* Changed button text */}
                 </td>
               </tr>
             ))}
