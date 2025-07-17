@@ -1,5 +1,5 @@
 // client-portal/src/AuthContext.js
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react'; // Added useCallback here
 
 const AuthContext = createContext(null);
 
@@ -55,8 +55,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     return response;
-  }, [token]); // Recreate authFetch if token changes
-
+  }, [token, logout]); // Added logout to dependency array as it's a stable function from useCallback and will be defined once
 
   return (
     <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, login, logout, isLoading, authFetch }}>
