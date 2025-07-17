@@ -5,10 +5,11 @@ import { CSS } from '@dnd-kit/utilities';
 import './Shared.css';
 import './Tasks.css';
 
-// Task Card now has an onEdit prop to make it clickable
+// Draggable Task Card Component
 const TaskCard = ({ task, onEdit }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task._id });
   const style = { transform: CSS.Transform.toString(transform), transition };
+
   return (
     <div className="task-card" onClick={() => onEdit(task)} ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <h4>{task.title}</h4>
@@ -18,9 +19,10 @@ const TaskCard = ({ task, onEdit }) => {
   );
 };
 
-// TaskColumn now passes the onEdit function down to the card
+// Droppable Column Component
 const TaskColumn = ({ id, title, tasks, onEdit }) => {
   const { setNodeRef } = useSortable({ id });
+
   return (
     <div className="task-column">
       <h2>{title} ({tasks.length})</h2>
@@ -33,37 +35,90 @@ const TaskColumn = ({ id, title, tasks, onEdit }) => {
   );
 };
 
+
 function Tasks() {
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // State for modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
 
-  // State for forms
   const [newTask, setNewTask] = useState({ title: '', description: '', projectId: '', assignedTo: '' });
   
   const token = localStorage.getItem('token');
 
-  const fetchData = useCallback(async () => { /* ... (no changes needed) */ }, [token]);
-  useEffect(() => { fetchData(); }, [fetchData]);
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [tasksRes, projectsRes, usersRes] = await Promise.all([
+        fetch(`${process.env.REACT_APP_API_URL}/api/tasks`, { headers: { 'x-auth-token': token } }),
+        fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
+        fetch(`${process.env.REACT_APP_API_URL}/api/users`, { headers: { 'x-auth-token': token } })
+      ]);
+      const tasksData = await tasksRes.json();
+      const projectsData = await projectsRes.json();
+      const usersData = await usersRes.json();
+      setTasks(tasksData);
+      setProjects(projectsData);
+      setUsers(usersData);
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token]);
 
-  const handleDragEnd = async (event) => { /* ... (no changes needed) */ };
-  const handleAddInputChange = (e) => { setNewTask({ ...newTask, [e.target.name]: e.target.value }); };
-  const handleAddTask = async (e) => { /* ... (no changes needed) */ };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  // --- NEW FUNCTIONS FOR EDITING ---
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    
+    const activeTask = tasks.find(t => t._id === active.id);
+    const oldStatus = activeTask.status;
+    const newStatus = over.id;
+
+    if (oldStatus !== newStatus) {
+      setTasks(currentTasks => 
+        currentTasks.map(t => (t._id === active.id ? { ...t, status: newStatus } : t))
+      );
+      
+      await fetch(`${process.env.REACT_APP_API_URL}/api/tasks/${active.id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({ status: newStatus }),
+      });
+    }
+  };
+
+  const handleAddInputChange = (e) => {
+    setNewTask({ ...newTask, [e.target.name]: e.target.value });
+  };
+  
+  const handleEditInputChange = (e) => {
+    setEditingTask({ ...editingTask, [e.target.name]: e.target.value });
+  };
+
+  const handleAddTask = async (e) => {
+    e.preventDefault();
+    await fetch(`${process.env.REACT_APP_API_URL}/api/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+      body: JSON.stringify(newTask)
+    });
+    setShowAddModal(false);
+    setNewTask({ title: '', description: '', projectId: '', assignedTo: '' });
+    fetchData();
+  };
+
   const openEditModal = (task) => {
     setEditingTask(task);
     setShowEditModal(true);
-  };
-
-  const handleEditInputChange = (e) => {
-    setEditingTask({ ...editingTask, [e.target.name]: e.target.value });
   };
 
   const handleUpdateTask = async (e) => {
@@ -85,42 +140,35 @@ function Tasks() {
 
   return (
     <div>
-      <div className="page-header">{/*...*/}</div>
+      <div className="page-header">
+        <h1 className="page-title">Task Board</h1>
+        <button className="add-button" onClick={() => setShowAddModal(true)}>+ Add Task</button>
+      </div>
 
-      {/* Add Task Modal (no changes) */}
-      {showAddModal && <div className="modal-backdrop">{/*...*/}</div>}
+      {showAddModal && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div className="modal-header"><h2 className="modal-title">Add New Task</h2><button className="close-button" onClick={() => setShowAddModal(false)}>&times;</button></div>
+            <form onSubmit={handleAddTask}>
+              <div className="form-group"><label>Task Title</label><input type="text" name="title" onChange={handleAddInputChange} required /></div>
+              <div className="form-group"><label>Assign to Project</label><select name="projectId" onChange={handleAddInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
+              <div className="form-group"><label>Description</label><textarea name="description" rows="3" onChange={handleAddInputChange}></textarea></div>
+              <div className="form-group"><label>Assign To</label><select name="assignedTo" onChange={handleAddInputChange}><option value="">Unassigned</option>{users.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}</select></div>
+              <button type="submit" className="add-button">Save Task</button>
+            </form>
+          </div>
+        </div>
+      )}
 
-      {/* --- NEW EDIT TASK MODAL --- */}
       {showEditModal && editingTask && (
         <div className="modal-backdrop">
           <div className="modal-content">
-            <div className="modal-header">
-              <h2 className="modal-title">Edit Task</h2>
-              <button className="close-button" onClick={() => setShowEditModal(false)}>&times;</button>
-            </div>
+            <div className="modal-header"><h2 className="modal-title">Edit Task</h2><button className="close-button" onClick={() => setShowEditModal(false)}>&times;</button></div>
             <form onSubmit={handleUpdateTask}>
-              <div className="form-group">
-                <label>Task Title</label>
-                <input type="text" name="title" value={editingTask.title} onChange={handleEditInputChange} required />
-              </div>
-              <div className="form-group">
-                <label>Assign to Project</label>
-                <select name="projectId" value={editingTask.projectId?._id || editingTask.projectId} onChange={handleEditInputChange} required>
-                  <option value="">Select a Project</option>
-                  {projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea name="description" rows="3" value={editingTask.description} onChange={handleEditInputChange}></textarea>
-              </div>
-              <div className="form-group">
-                <label>Assign To</label>
-                <select name="assignedTo" value={editingTask.assignedTo?._id || editingTask.assignedTo} onChange={handleEditInputChange}>
-                  <option value="">Unassigned</option>
-                  {users.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}
-                </select>
-              </div>
+              <div className="form-group"><label>Task Title</label><input type="text" name="title" value={editingTask.title} onChange={handleEditInputChange} required /></div>
+              <div className="form-group"><label>Assign to Project</label><select name="projectId" value={editingTask.projectId?._id || editingTask.projectId} onChange={handleEditInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
+              <div className="form-group"><label>Description</label><textarea name="description" rows="3" value={editingTask.description} onChange={handleEditInputChange}></textarea></div>
+              <div className="form-group"><label>Assign To</label><select name="assignedTo" value={editingTask.assignedTo?._id || editingTask.assignedTo} onChange={handleEditInputChange}><option value="">Unassigned</option>{users.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}</select></div>
               <button type="submit" className="add-button">Update Task</button>
             </form>
           </div>
@@ -130,13 +178,7 @@ function Tasks() {
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="task-board-container">
           {columns.map(columnName => (
-            <TaskColumn 
-              key={columnName} 
-              id={columnName} 
-              title={columnName} 
-              tasks={tasksByColumn(columnName)} 
-              onEdit={openEditModal} // Pass the function down
-            />
+            <TaskColumn key={columnName} id={columnName} title={columnName} tasks={tasksByColumn(columnName)} onEdit={openEditModal} />
           ))}
         </div>
       </DndContext>
