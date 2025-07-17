@@ -1,163 +1,319 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import './ProjectDetail.css';
+import { useParams } from 'react-router-dom';
+import './Shared.css'; // For general styles
+import './ProjectDetail.css'; // For project detail specific styles
 
-function ProjectDetail({ project, onBack, token }) {
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
-  const [files, setFiles] = useState([]);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [fileUploadError, setFileUploadError] = useState('');
+function ProjectDetail() {
+  const { projectId } = useParams();
+  const [project, setProject] = useState(null);
+  const [milestones, setMilestones] = useState([]); // State for milestones
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [apiMessage, setApiMessage] = useState(''); // For success/error messages from API actions
+  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
 
-  const fetchData = useCallback(async () => {
+  // States for milestone modals
+  const [showAddMilestoneModal, setShowAddMilestoneModal] = useState(false);
+  const [showEditMilestoneModal, setShowEditMilestoneModal] = useState(false);
+  const [showDeleteMilestoneModal, setShowDeleteMilestoneModal] = useState(false);
+  const [newMilestone, setNewMilestone] = useState({ name: '', description: '', dueDate: '', status: 'Not Started' });
+  const [selectedMilestone, setSelectedMilestone] = useState(null); // Milestone being edited/deleted
+
+  const token = localStorage.getItem('token');
+
+  const fetchProjectAndMilestones = useCallback(async () => {
     setIsLoading(true);
+    setError('');
     try {
-      const [commentsRes, filesRes] = await Promise.all([
-        fetch(`${process.env.REACT_APP_API_URL}/api/projects/${project._id}/comments`, {
-          headers: { 'x-auth-token': token }
-        }),
-        fetch(`${process.env.REACT_APP_API_URL}/api/projects/${project._id}/files`, {
-          headers: { 'x-auth-token': token }
-        })
-      ]);
+      const projectResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/projects/${projectId}`, {
+        headers: { 'x-auth-token': token }
+      });
+      const projectData = await projectResponse.json();
 
-      if (!commentsRes.ok || !filesRes.ok) {
-        throw new Error('Failed to fetch project details');
+      if (!projectResponse.ok) {
+        throw new Error(projectData.msg || 'Failed to fetch project details.');
+      }
+      setProject(projectData);
+
+      // Fetch milestones for this project
+      // Note: The /api/projects endpoint with aggregate already fetches milestones.
+      // We can refine this to explicitly fetch milestones for a project if needed.
+      // For simplicity, we'll use the populated data from the project details if available,
+      // otherwise, you'd add a /api/milestones?projectId=XXX endpoint.
+      // Based on server.js /api/projects aggregate, milestones are populated within project.
+      if (projectData.milestones) {
+        const sortedMilestones = projectData.milestones.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        setMilestones(sortedMilestones);
+      } else {
+        setMilestones([]);
       }
 
-      const commentsData = await commentsRes.json();
-      const filesData = await filesRes.json();
-
-      setComments(commentsData);
-      setFiles(filesData);
-    } catch (error) {
-      console.error("Fetch Error:", error);
+    } catch (err) {
+      console.error("Error fetching project or milestones:", err);
+      setError(err.message || 'Error loading project or milestones.');
     } finally {
       setIsLoading(false);
     }
-  }, [project._id, token]);
+  }, [projectId, token]); // Dependencies: projectId, token
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchProjectAndMilestones();
+  }, [fetchProjectAndMilestones]);
 
-  const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
-    setFileUploadError('');
-  };
-
-  const handleFileUpload = async (e) => {
-    e.preventDefault();
-    if (!selectedFile) {
-      setFileUploadError('Please select a file to upload.');
-      return;
+  // Handle input changes for new/edit milestone forms
+  const handleMilestoneInputChange = useCallback((e) => {
+    const { name, value } = e.target;
+    if (showAddMilestoneModal) {
+      setNewMilestone(prev => ({ ...prev, [name]: value }));
+    } else if (showEditMilestoneModal) {
+      setSelectedMilestone(prev => ({ ...prev, [name]: value }));
     }
+  }, [showAddMilestoneModal, showEditMilestoneModal]);
 
-    const formData = new FormData();
-    formData.append('projectFile', selectedFile);
+  // Close all milestone modals and reset forms/messages
+  const handleCloseMilestoneModals = useCallback(() => {
+    setShowAddMilestoneModal(false);
+    setShowEditMilestoneModal(false);
+    setShowDeleteMilestoneModal(false);
+    setNewMilestone({ name: '', description: '', dueDate: '', status: 'Not Started' });
+    setSelectedMilestone(null);
+    setApiMessage(''); // Clear API message
+    setMessageType('');
+  }, []);
+
+  // --- Milestone Actions ---
+  const handleAddMilestone = useCallback(async (e) => {
+    e.preventDefault();
+    setApiMessage('');
+    setMessageType('');
+    try {
+      const milestoneData = { ...newMilestone, projectId }; // Link milestone to current project
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/milestones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify(milestoneData),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.msg || 'Failed to add milestone.');
+      }
+      setApiMessage('Milestone added successfully!');
+      setMessageType('success');
+      handleCloseMilestoneModals();
+      fetchProjectAndMilestones(); // Re-fetch all data
+    } catch (err) {
+      console.error("Error adding milestone:", err);
+      setApiMessage(err.message || 'Error adding milestone.');
+      setMessageType('error');
+    }
+  }, [newMilestone, projectId, token, handleCloseMilestoneModals, fetchProjectAndMilestones]);
+
+
+  const handleUpdateMilestone = useCallback(async (e) => {
+    e.preventDefault();
+    setApiMessage('');
+    setMessageType('');
+    if (!selectedMilestone) return;
+
+    // Ensure the dueDate is in YYYY-MM-DD format for input type="date"
+    const milestoneData = { 
+      ...selectedMilestone,
+      dueDate: selectedMilestone.dueDate ? new Date(selectedMilestone.dueDate).toISOString().split('T')[0] : ''
+    };
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/projects/${project._id}/files`, {
-        method: 'POST',
-        headers: { 'x-auth-token': token },
-        body: formData
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/milestones/${selectedMilestone._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify(milestoneData),
       });
-
+      const data = await response.json();
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.msg || 'File upload failed');
+        throw new Error(data.msg || 'Failed to update milestone.');
       }
-
-      setSelectedFile(null);
-      setFileUploadError('');
-      e.target.reset();
-      fetchData();
-    } catch (error) {
-      setFileUploadError(error.message);
+      setApiMessage('Milestone updated successfully!');
+      setMessageType('success');
+      handleCloseMilestoneModals();
+      fetchProjectAndMilestones(); // Re-fetch all data
+    } catch (err) {
+      console.error("Error updating milestone:", err);
+      setApiMessage(err.message || 'Error updating milestone.');
+      setMessageType('error');
     }
-  };
+  }, [selectedMilestone, token, handleCloseMilestoneModals, fetchProjectAndMilestones]);
 
-  const handlePostComment = async (e) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/projects/${project._id}/comments`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-      body: JSON.stringify({ text: newComment })
-    });
-
-    if (response.ok) {
-      setNewComment('');
-      fetchData();
-    } else {
-      console.error("Failed to post comment.");
+  const handleDeleteMilestone = useCallback(async () => {
+    setApiMessage('');
+    setMessageType('');
+    if (!selectedMilestone) return;
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/milestones/${selectedMilestone._id}`, {
+        method: 'DELETE',
+        headers: { 'x-auth-token': token },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.msg || 'Failed to delete milestone.');
+      }
+      setApiMessage('Milestone deleted successfully!');
+      setMessageType('success');
+      handleCloseMilestoneModals();
+      fetchProjectAndMilestones(); // Re-fetch all data
+    } catch (err) {
+      console.error("Error deleting milestone:", err);
+      setApiMessage(err.message || 'Error deleting milestone.');
+      setMessageType('error');
     }
-  };
+  }, [selectedMilestone, token, handleCloseMilestoneModals, fetchProjectAndMilestones]);
+
+
+  if (isLoading) return <div>Loading project details...</div>;
+  if (error) return <div className="error-message" style={{ padding: '20px' }}>Error: {error}</div>;
+  if (!project) return <div>Project not found.</div>;
+
 
   return (
-    <div>
-      <button className="back-button" onClick={onBack}>&larr; Back to All Projects</button>
-      <h1 className="page-title">{project.title}</h1>
-      <div className="project-meta-data">
-        <p><strong>Client:</strong> {project.clientId?.name}</p>
-        <p><strong>Status:</strong> {project.status}</p>
-        <p><strong>Description:</strong> {project.description}</p>
+    <div className="project-detail-page">
+      <div className="page-header">
+        <h1 className="page-title">Project: {project.title}</h1>
+        <p className="project-description">{project.description}</p>
+        <p>Status: {project.status}</p>
+        <p>Client: {project.clientId ? project.clientId.name : 'N/A'}</p>
       </div>
 
-      <div className="file-section">
-        <h3>Project Files & Media</h3>
-        <form onSubmit={handleFileUpload} className="file-upload-form">
-          <div className="form-group">
-            <label htmlFor="file-input">Upload New File</label>
-            <input id="file-input" type="file" onChange={handleFileChange} />
-          </div>
-          <button type="submit" className="upload-button">Upload</button>
-          {fileUploadError && <p className="error-message">{fileUploadError}</p>}
-        </form>
-        <div className="file-list">
-          {isLoading ? <p>Loading files...</p> : files.length > 0 ? (
-            <ul>
-              {files.map(file => (
-                <li key={file._id} className="file-item">
-                  <a href={`${process.env.REACT_APP_API_URL}${file.path}`} target="_blank" rel="noopener noreferrer">
-                    {file.originalName}
-                  </a>
-                  <div className="file-meta">
-                     Uploaded on {new Date(file.createdAt).toLocaleDateString()}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No files have been uploaded for this project.</p>
-          )}
+      {apiMessage && ( // Display API success/error messages
+        <div className={`message-banner ${messageType}`}>
+          {apiMessage}
+          <button className="close-message" onClick={() => setApiMessage('')}>X</button>
+        </div>
+      )}
+
+      {/* Milestones Section */}
+      <div className="milestones-section">
+        <h2>Milestones</h2>
+        <button className="add-button" onClick={() => setShowAddMilestoneModal(true)}>+ Add Milestone</button>
+        
+        <div className="data-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Client Suggestions</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {milestones.length > 0 ? (
+                milestones.map(milestone => (
+                  <tr key={milestone._id}>
+                    <td>{milestone.name}</td>
+                    <td>{new Date(milestone.dueDate).toLocaleDateString()}</td>
+                    <td>{milestone.status}</td>
+                    <td>{milestone.clientSuggestions || 'N/A'}</td>
+                    <td className="actions-cell">
+                      <button 
+                        className="edit-button" 
+                        onClick={() => { 
+                            setSelectedMilestone(milestone); 
+                            setShowEditMilestoneModal(true); 
+                        }}
+                      >Edit</button>
+                      <button 
+                        className="delete-button" 
+                        onClick={() => { 
+                            setSelectedMilestone(milestone); 
+                            setShowDeleteMilestoneModal(true); 
+                        }}
+                      >Delete</button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan="5">No milestones defined for this project.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div className="comment-section">
-        <h3>Developer Comments</h3>
-        <form onSubmit={handlePostComment} className="comment-form">
-          <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Write an update or ask a question..."
-            rows="3"
-          />
-          <button type="submit">Post Comment</button>
-        </form>
-        <div className="comment-list">
-          {isLoading ? <p>Loading comments...</p> : comments.map(comment => (
-            <div key={comment._id} className="comment-card">
-              <p className="comment-text">{comment.text}</p>
-              <div className="comment-meta">
-                <span>by <strong>{comment.author?.name}</strong></span>
-                <span>on {new Date(comment.createdAt).toLocaleString()}</span>
-              </div>
+      {/* Add Milestone Modal */}
+      {showAddMilestoneModal && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2 className="modal-title">Add New Milestone</h2>
+              <button className="close-button" onClick={handleCloseMilestoneModals}>&times;</button>
             </div>
-          ))}
+            {apiError && <div className="error-message">{apiError}</div>}
+            <form onSubmit={handleAddMilestone}>
+              <div className="form-group"><label>Name</label><input type="text" name="name" value={newMilestone.name} onChange={handleMilestoneInputChange} required /></div>
+              <div className="form-group"><label>Description</label><textarea name="description" value={newMilestone.description} onChange={handleMilestoneInputChange}></textarea></div>
+              <div className="form-group"><label>Due Date</label><input type="date" name="dueDate" value={newMilestone.dueDate} onChange={handleMilestoneInputChange} required /></div>
+              <div className="form-group">
+                <label>Status</label>
+                <select name="status" value={newMilestone.status} onChange={handleMilestoneInputChange}>
+                  <option value="Not Started">Not Started</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="On Hold">On Hold</option>
+                  <option value="Canceled">Canceled</option>
+                </select>
+              </div>
+              <button type="submit" className="add-button">Create Milestone</button>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Edit Milestone Modal */}
+      {showEditMilestoneModal && selectedMilestone && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2 className="modal-title">Edit Milestone</h2>
+              <button className="close-button" onClick={handleCloseMilestoneModals}>&times;</button>
+            </div>
+            {apiError && <div className="error-message">{apiError}</div>}
+            <form onSubmit={handleUpdateMilestone}>
+              <div className="form-group"><label>Name</label><input type="text" name="name" value={selectedMilestone.name} onChange={handleMilestoneInputChange} required /></div>
+              <div className="form-group"><label>Description</label><textarea name="description" value={selectedMilestone.description} onChange={handleMilestoneInputChange}></textarea></div>
+              <div className="form-group"><label>Due Date</label><input type="date" name="dueDate" value={selectedMilestone.dueDate ? selectedMilestone.dueDate.split('T')[0] : ''} onChange={handleMilestoneInputChange} required /></div>
+              <div className="form-group">
+                <label>Status</label>
+                <select name="status" value={selectedMilestone.status} onChange={handleMilestoneInputChange}>
+                  <option value="Not Started">Not Started</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="On Hold">On Hold</option>
+                  <option value="Canceled">Canceled</option>
+                </select>
+              </div>
+              <div className="form-group"><label>Client Suggestions</label><textarea name="clientSuggestions" value={selectedMilestone.clientSuggestions || ''} onChange={handleMilestoneInputChange} readOnly></textarea></div>
+              <button type="submit" className="add-button">Save Changes</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Milestone Confirmation Modal */}
+      {showDeleteMilestoneModal && selectedMilestone && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2 className="modal-title">Confirm Delete Milestone</h2>
+              <button className="close-button" onClick={handleCloseMilestoneModals}>&times;</button>
+            </div>
+            {apiError && <div className="error-message">{apiError}</div>}
+            <p>Are you sure you want to delete the milestone <strong>{selectedMilestone.name}</strong>? This action cannot be undone, and will unlink any tasks associated with it.</p>
+            <div className="modal-actions">
+              <button className="cancel-button" onClick={handleCloseMilestoneModals}>Cancel</button>
+              <button className="delete-button" onClick={handleDeleteMilestone}>Confirm Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

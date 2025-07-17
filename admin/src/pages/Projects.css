@@ -1,122 +1,204 @@
-.comment-section {
-  margin-top: 40px;
-  background: #fff;
+/* admin/src/pages/ProjectDetail.css */
+
+.project-detail-page {
+  padding: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.project-detail-page .page-header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.project-detail-page .page-title {
+  color: #007bff;
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.project-detail-page .project-description {
+  background-color: #2a2a2a;
   padding: 20px;
   border-radius: 8px;
+  margin-bottom: 30px;
+  line-height: 1.6;
+  color: #ccc;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.comment-form {
-  display: flex;
-  flex-direction: column;
+/* Milestones Section */
+.milestones-section {
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.milestones-section h2 {
+  color: #f0f0f0;
+  margin-top: 0;
   margin-bottom: 20px;
-}
-
-.comment-form textarea {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
-  margin-bottom: 10px;
-  font-family: inherit;
-}
-
-.comment-form button {
-  align-self: flex-end;
-  background-color: #1abc9c;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.comment-card {
-  border: 1px solid #e9ecef;
-  padding: 15px;
-  border-radius: 5px;
-  margin-bottom: 15px;
-}
-
-.comment-text {
-  margin: 0 0 10px 0;
-}
-
-.comment-meta {
+  font-size: 2rem;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 10px;
   display: flex;
   justify-content: space-between;
-  font-size: 0.85rem;
-  color: #6c757d;
+  align-items: center;
 }
 
-/* Existing styles from Projects.css */
-.project-link {
-  color: #1abc9c;
-  font-weight: bold;
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.back-button {
-  background: #ecf0f1;
+.milestones-section .add-button {
+  background-color: #28a745;
+  color: white;
+  padding: 8px 15px;
   border: none;
-  padding: 10px 15px;
   border-radius: 5px;
   cursor: pointer;
-  font-weight: bold;
-  margin-bottom: 20px;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
 }
 
-.project-link-button {
+.milestones-section .add-button:hover {
+  background-color: #218838;
+}
+
+/* Styles for actions in table cells */
+.actions-cell button {
+  padding: 6px 10px;
+  margin-right: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  border: none;
+  transition: background-color 0.2s ease;
+}
+
+.actions-cell .edit-button {
+  background-color: #007bff;
+  color: white;
+}
+.actions-cell .edit-button:hover {
+  background-color: #0056b3;
+}
+
+.actions-cell .delete-button {
+  background-color: #dc3545;
+  color: white;
+}
+.actions-cell .delete-button:hover {
+  background-color: #c82333;
+}
+
+/* Modal specific styles (reused from Shared.css or defined here) */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #3a3a3a; /* Darker background for modal */
+  color: #f0f0f0;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  width: 90%;
+  max-width: 500px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.modal-header .modal-title {
+  font-size: 1.8rem;
+  color: #007bff;
+  margin: 0;
+}
+
+.modal-header .close-button {
   background: none;
   border: none;
+  color: #f0f0f0;
+  font-size: 2rem;
+  cursor: pointer;
   padding: 0;
-  color: #1abc9c;
-  font-weight: bold;
-  text-decoration: underline;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: inherit;
 }
 
-.page-title-group {
-  display: flex;
-  align-items: baseline;
-  gap: 15px;
+.modal-header .close-button:hover {
+  color: #aaa;
 }
 
-.featured-count-indicator {
-  background-color: #ecf0f1;
-  color: #7f8c8d;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
+.modal-content .form-group {
+  margin-bottom: 15px;
+  text-align: left;
 }
 
-.error-banner {
-  background-color: #ffebee;
-  color: #c62828;
-  padding: 12px;
+.modal-content .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #ccc;
+  font-size: 0.95rem;
+}
+
+.modal-content .form-group input[type="text"],
+.modal-content .form-group input[type="email"],
+.modal-content .form-group input[type="password"],
+.modal-content .form-group input[type="date"],
+.modal-content .form-group textarea,
+.modal-content .form-group select {
+  width: calc(100% - 22px); /* Adjust for padding + border */
+  padding: 10px;
+  background-color: #444;
+  border: 1px solid #555;
   border-radius: 5px;
-  margin-bottom: 20px;
-  font-weight: 500;
-  border: 1px solid #e57373;
+  color: #f0f0f0;
+  font-size: 1rem;
 }
 
-.feature-button {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-  border: 1px solid #a5d6a7;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
+.modal-content .form-group input:focus,
+.modal-content .form-group textarea:focus,
+.modal-content .form-group select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-.feature-button:hover {
-  background-color: #dcedc8;
+.modal-content .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 30px;
+  gap: 10px;
+}
+
+.modal-content .cancel-button {
+  background-color: #6c757d; /* Gray for cancel */
+  color: white;
+}
+.modal-content .cancel-button:hover {
+  background-color: #5a6268;
+}
+
+.modal-content .add-button {
+  background-color: #28a745; /* Green for add/save */
+  color: white;
+}
+.modal-content .add-button:hover {
+  background-color: #218838;
+}
+
+/* Specific styles for ProjectDetail's text areas if needed */
+.milestones-section textarea {
+    min-height: 80px;
 }
