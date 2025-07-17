@@ -179,7 +179,7 @@ app.get('/api/services', async (req, res) => {
 
 // == CORE PROTECTED ROUTES ==
 // PROJECTS
-app.get('/api/projects', authMiddleware, async (req, res) => {
+app.get('/api/projects', async (req, res) => {
     try {
         const projects = await Project.aggregate([
             { $lookup: { from: 'comments', localField: '_id', foreignField: 'project', as: 'comments' } },
