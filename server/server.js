@@ -525,26 +525,26 @@ app.get('/api/projects/:id', authMiddleware, async (req, res) => {
   try {
     const { projectId } = req.params;
 
+    // Check for a valid MongoDB ObjectId
     if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ msg: 'Invalid Project ID.' });
+      return res.status(400).json({ msg: 'Invalid Project ID format.' });
     }
 
-    // This single query now fetches the project AND its milestones
-    // by populating the virtual field we created earlier.
-    const project = await Project.findById(projectId)
-      .populate('clientId', 'name')
-      .populate('milestones'); // <-- This is the key change
+    // 1. Fetch ONLY the project and its immediate client details.
+    //    We are no longer populating milestones here, which removes the source of the crash.
+    const project = await Project.findById(projectId).populate('clientId', 'name');
 
+    // 2. Check if the project was found
     if (!project) {
       return res.status(404).json({ msg: 'Project not found.' });
     }
 
-    // The project object now automatically includes the milestones array.
+    // 3. Send the simplified project object as the response.
     res.json(project);
 
   } catch (err) {
-    // This will catch any errors during the find or populate process
-    console.error('Error fetching single project with milestones:', err);
+    // This catch block will now properly handle any errors and send a clean JSON response.
+    console.error('Error fetching single project:', err);
     res.status(500).json({ msg: 'Server error while fetching project details.' });
   }
 });
