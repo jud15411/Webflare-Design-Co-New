@@ -523,28 +523,25 @@ app.post('/api/projects', authMiddleware, (req, res) => {
 
 app.get('/api/projects/:id', authMiddleware, async (req, res) => {
   try {
-    const { projectId } = req.params;
+    const projectId = req.params.id;
 
-    // Check for a valid MongoDB ObjectId
     if (!mongoose.Types.ObjectId.isValid(projectId)) {
       return res.status(400).json({ msg: 'Invalid Project ID format.' });
     }
 
-    // 1. Fetch ONLY the project and its immediate client details.
-    //    We are no longer populating milestones here, which removes the source of the crash.
+    // Fetch ONLY the project and its client. Do not fetch milestones.
     const project = await Project.findById(projectId).populate('clientId', 'name');
 
-    // 2. Check if the project was found
     if (!project) {
       return res.status(404).json({ msg: 'Project not found.' });
     }
 
-    // 3. Send the simplified project object as the response.
+    // Send the lean project object as the response.
     res.json(project);
 
   } catch (err) {
-    // This catch block will now properly handle any errors and send a clean JSON response.
     console.error('Error fetching single project:', err);
+    // Correctly send a JSON error response
     res.status(500).json({ msg: 'Server error while fetching project details.' });
   }
 });
@@ -590,7 +587,6 @@ app.get('/api/projects/:projectId/hours', authMiddleware, async (req, res) => {
     res.status(500).json({ msg: 'Server Error' });
   }
 });
-
 
 // == MILESTONES ==
 app.post('/api/milestones', authMiddleware, adminOnlyMiddleware, async (req, res) => {
@@ -725,12 +721,14 @@ app.put('/api/client/milestones/:milestoneId/suggest', authMiddleware, clientOnl
 
 
 // == FILES, COMMENTS, ETC. ==
-app.get('/api/projects/:projectId/files', authMiddleware, ownerOrAdminMiddleware, async (req, res) => {
+app.get('/api/projects/:projectId/files', authMiddleware, async (req, res) => {
     try {
-        const files = await File.find({ projectId: req.params.projectId }).sort({ createdAt: 'desc' });
+        const files = await File.find({ projectId: req.params.projectId }).sort({ createdAt: -1 });
         res.json(files);
     } catch (err) {
-        res.status(500).send('Server Error');
+        console.error('Error fetching files:', err);
+        // Change res.send to res.json
+        res.status(500).json({ msg: 'Server Error fetching files.' });
     }
 });
 
@@ -760,11 +758,17 @@ app.post('/api/projects/:projectId/files', authMiddleware, adminOnlyMiddleware, 
     });
 });
 
-app.get('/api/projects/:projectId/comments', authMiddleware, ownerOrAdminMiddleware, async (req, res) => {
+app.get('/api/projects/:projectId/comments', authMiddleware, async (req, res) => {
     try {
-        const comments = await Comment.find({ project: req.params.projectId }).sort({ createdAt: 'desc' }).populate('author', 'name');
+        const comments = await Comment.find({ projectId: req.params.projectId })
+            .sort({ createdAt: -1 })
+            .populate('author', 'name');
         res.json(comments);
-    } catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) {
+        console.error('Error fetching comments:', err);
+        // Change res.send to res.json
+        res.status(500).json({ msg: 'Server Error fetching comments.' });
+    }
 });
 
 app.post('/api/projects/:projectId/comments', authMiddleware, async (req, res) => {
