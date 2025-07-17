@@ -1,3 +1,5 @@
+// jud15411/webflare-design-co-new/Webflare-Design-Co-New-2100d7f30c3a6542772817c09db5f1d9a53ddf69/admin/src/pages/Invoices.js
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import InvoiceTemplate from '../components/InvoiceTemplate';
@@ -10,11 +12,18 @@ function Invoices() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [newInvoice, setNewInvoice] = useState({ amount: 0, dueDate: '', projectId: '', status: 'Draft' });
-  const [invoiceToPrint, setInvoiceToPrint] = useState(null);
+  const [invoiceToPrint, setInvoiceToPrint] = useState(null); // State to hold the invoice data for printing
 
   const token = localStorage.getItem('token');
   const componentRef = useRef();
 
+  // This is the useReactToPrint hook, correctly set up to use the ref.
+  const handlePrint = useReactToPrint({
+    content: () => componentRef.current,
+    onAfterPrint: () => setInvoiceToPrint(null), // Clear the invoiceToPrint state after printing
+  });
+
+  // Fetch data for invoices and projects
   const fetchData = useCallback(async () => {
     const [invoicesRes, projectsRes] = await Promise.all([
       fetch(`${process.env.REACT_APP_API_URL}/api/invoices`, { headers: { 'x-auth-token': token } }),
@@ -29,6 +38,13 @@ function Invoices() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // NEW: useEffect to trigger print when invoiceToPrint is set
+  useEffect(() => {
+    if (invoiceToPrint) { // Only trigger if invoiceToPrint has data
+      handlePrint();
+    }
+  }, [invoiceToPrint, handlePrint]); // Dependency array: re-run when invoiceToPrint or handlePrint changes
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -82,16 +98,9 @@ function Invoices() {
     }
   };
   
-  const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
-    onAfterPrint: () => setInvoiceToPrint(null),
-  });
-
+  // This function now just sets the invoice to print, the useEffect will handle the actual print trigger
   const triggerPrint = (invoice) => {
-    setInvoiceToPrint(invoice);
-    setTimeout(() => {
-      handlePrint();
-    }, 0);
+    setInvoiceToPrint(invoice); 
   };
 
   return (
@@ -164,6 +173,8 @@ function Invoices() {
         </div>
       )}
 
+      {/* This div needs to be rendered, but can be hidden visually. */}
+      {/* The InvoiceTemplate will only render its content if invoiceToPrint is not null. */}
       <div className="hidden-for-print">
         <InvoiceTemplate ref={componentRef} invoice={invoiceToPrint} />
       </div>
