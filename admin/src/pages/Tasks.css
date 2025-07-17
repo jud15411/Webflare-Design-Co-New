@@ -1,8 +1,7 @@
 .task-board-container {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
-  overflow-x: auto; /* Allows horizontal scrolling on smaller screens */
 }
 
 .task-column {
