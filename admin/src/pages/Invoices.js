@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import InvoiceTemplate from '../components/InvoiceTemplate';
-import './Shared.css'; // Assuming this has general table styling
-import './Invoices.css'; // Ensure you have specific styles for Invoices if needed
+import ConfirmModal from '../components/ConfirmModal'; // Import ConfirmModal
+import './Shared.css';
+import './Invoices.css';
 
 function Invoices() {
   const [invoices, setInvoices] = useState([]);
@@ -15,8 +16,17 @@ function Invoices() {
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [newInvoice, setNewInvoice] = useState({ amount: 0, dueDate: '', projectId: '', status: 'Draft' });
   const [invoiceToPrint, setInvoiceToPrint] = useState(null);
-  const [message, setMessage] = useState(''); // State for success/error messages
-  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('');
+  
+  // States for the custom confirmation modal (for sending email)
+  const [showConfirmSendModal, setShowConfirmSendModal] = useState(false); // Renamed for clarity
+  const [invoiceIdToSend, setInvoiceIdToSend] = useState(null);
+
+  // New states for the custom confirmation modal (for deleting)
+  const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
+  const [invoiceIdToDelete, setInvoiceIdToDelete] = useState(null);
+
 
   const token = localStorage.getItem('token');
   const componentRef = useRef();
@@ -108,27 +118,43 @@ function Invoices() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this invoice?')) {
-      setMessage('');
-      setMessageType('');
-      try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/invoices/${id}`, {
-          method: 'DELETE',
-          headers: { 'x-auth-token': token },
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.msg || 'Failed to delete invoice');
-        
-        fetchData();
-        setMessage('Invoice deleted successfully!');
-        setMessageType('success');
-      } catch (error) {
-        console.error("Error deleting invoice:", error);
-        setMessage(error.message || 'Error deleting invoice.');
-        setMessageType('error');
-      }
+  // NEW: Function to initiate invoice deletion (shows custom modal)
+  const confirmDeleteInvoice = (id) => {
+    setInvoiceIdToDelete(id);
+    setShowConfirmDeleteModal(true);
+  };
+
+  // NEW: Actual function to delete invoice after confirmation
+  const executeDeleteInvoice = async () => {
+    setShowConfirmDeleteModal(false); // Close the modal immediately
+    setMessage('');
+    setMessageType('');
+
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/invoices/${invoiceIdToDelete}`, {
+        method: 'DELETE',
+        headers: { 'x-auth-token': token },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.msg || 'Failed to delete invoice');
+      
+      fetchData();
+      setMessage('Invoice deleted successfully!');
+      setMessageType('success');
+    } catch (error) {
+      console.error("Error deleting invoice:", error);
+      setMessage(error.message || 'Error deleting invoice.');
+      setMessageType('error');
+    } finally {
+      setInvoiceIdToDelete(null); // Clear the stored invoice ID
     }
+  };
+
+  const cancelDeleteInvoice = () => {
+    setShowConfirmDeleteModal(false);
+    setInvoiceIdToDelete(null); // Clear the stored invoice ID
+    setMessage('Invoice deletion cancelled.');
+    setMessageType('info'); // Optional: show a cancellation message
   };
 
   const handlePrint = useCallback(async (invoice) => {
@@ -162,16 +188,20 @@ function Invoices() {
     }, 50); // Small delay to allow rendering
   }, []);
 
-  // NEW: Handle sending invoice email
-  const handleSendEmail = async (invoiceId) => {
+  // Handle sending invoice email
+  const confirmSendEmail = (invoiceId) => {
+    setInvoiceIdToSend(invoiceId);
+    setShowConfirmSendModal(true);
+  };
+
+  // Actual function to send invoice email after confirmation
+  const executeSendEmail = async () => {
+    setShowConfirmSendModal(false); // Close the modal immediately
     setMessage('');
     setMessageType('');
-    if (!window.confirm('Are you sure you want to send this invoice to the client via email?')) {
-      return;
-    }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/invoices/${invoiceId}/send-email`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/invoices/${invoiceIdToSend}/send-email`, {
         method: 'POST', // Use POST for sending actions
         headers: {
           'Content-Type': 'application/json',
@@ -183,13 +213,22 @@ function Invoices() {
       if (!response.ok) {
         throw new Error(data.msg || 'Failed to send invoice email.');
       }
-      setMessage(data.msg); // E.g., "Invoice INV-001 sent successfully to client@example.com."
+      setMessage(data.msg);
       setMessageType('success');
     } catch (error) {
       console.error('Error sending invoice email:', error);
       setMessage(error.message);
       setMessageType('error');
+    } finally {
+      setInvoiceIdToSend(null); // Clear the stored invoice ID
     }
+  };
+
+  const cancelSendEmail = () => {
+    setShowConfirmSendModal(false);
+    setInvoiceIdToSend(null); // Clear the stored invoice ID
+    setMessage('Invoice email sending cancelled.');
+    setMessageType('info'); // Optional: show a cancellation message
   };
 
 
@@ -232,9 +271,9 @@ function Invoices() {
                   <td>{invoice.status}</td>
                   <td className="actions">
                     <button onClick={() => { setEditingInvoice(invoice); setShowEditModal(true); }} className="action-button edit">Edit</button>
-                    <button onClick={() => handleDelete(invoice._id)} className="action-button delete">Delete</button>
+                    <button onClick={() => confirmDeleteInvoice(invoice._id)} className="action-button delete">Delete</button> {/* Call custom confirmation for delete */}
                     <button onClick={() => handlePrint(invoice)} className="action-button print">Print PDF</button>
-                    <button onClick={() => handleSendEmail(invoice._id)} className="action-button send-email">Send Email</button> {/* NEW BUTTON */}
+                    <button onClick={() => confirmSendEmail(invoice._id)} className="action-button send-email">Send Email</button>
                   </td>
                 </tr>
               ))
@@ -307,6 +346,22 @@ function Invoices() {
           </div>
         </div>
       )}
+
+      {/* Custom Confirmation Modal (for sending email) */}
+      <ConfirmModal
+        isOpen={showConfirmSendModal}
+        message="Are you sure you want to send this invoice to the client via email?"
+        onConfirm={executeSendEmail}
+        onCancel={cancelSendEmail}
+      />
+
+      {/* Custom Confirmation Modal (for deleting invoice) */}
+      <ConfirmModal
+        isOpen={showConfirmDeleteModal}
+        message="Are you sure you want to permanently delete this invoice? This action cannot be undone."
+        onConfirm={executeDeleteInvoice}
+        onCancel={cancelDeleteInvoice}
+      />
 
       {/* IMPORTANT: Only render the InvoiceTemplate when invoiceToPrint has a value.
           This ensures the component mounts and the ref is attached ONLY when needed. */}

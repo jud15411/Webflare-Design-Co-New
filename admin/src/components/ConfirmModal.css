@@ -1,28 +1,58 @@
-.confirm-modal {
-  text-align: center;
-  max-width: 400px;
-}
-.confirm-modal p {
-  font-size: 1.1rem;
-  margin-bottom: 25px;
-}
-.confirm-modal-actions {
+/* admin/src/components/ConfirmModal.css */
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
-  gap: 15px;
+  align-items: center;
+  z-index: 1000; /* Ensure it's above other content */
 }
-.confirm-modal-actions button {
-  padding: 10px 25px;
+
+.modal-content-confirm {
+  background-color: #333;
+  color: #fff;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+
+.modal-content-confirm p {
+  margin-bottom: 25px;
+  font-size: 1.1rem;
+}
+
+.modal-actions button {
+  padding: 10px 20px;
   border: none;
   border-radius: 5px;
-  font-weight: bold;
   cursor: pointer;
+  font-size: 1rem;
+  margin: 0 10px;
+  transition: background-color 0.2s ease-in-out;
 }
-.cancel-button {
-  background-color: #ecf0f1;
-  color: #34495e;
-}
-.confirm-button {
-  background-color: #e74c3c;
+
+.modal-button.confirm {
+  background-color: #28a745; /* Green for confirm */
   color: white;
+}
+
+.modal-button.confirm:hover {
+  background-color: #218838;
+}
+
+.modal-button.cancel {
+  background-color: #dc3545; /* Red for cancel */
+  color: white;
+}
+
+.modal-button.cancel:hover {
+  background-color: #c82333;
 }
