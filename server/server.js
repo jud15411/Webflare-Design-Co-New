@@ -715,7 +715,64 @@ app.post('/api/contracts', authMiddleware, adminOnlyMiddleware, async (req, res)
 
 app.put('/api/contracts/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/contracts/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.findByIdAndDelete(req.params.id)));
+app.post('/api/invoices/:id/send-email', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        const invoice = await Invoice.findById(req.params.id).populate({
+            path: 'projectId',
+            populate: { path: 'clientId' }
+        });
 
+        if (!invoice) {
+            return res.status(404).json({ msg: 'Invoice not found.' });
+        }
+        if (!invoice.projectId || !invoice.projectId.clientId || !invoice.projectId.clientId.email) {
+            return res.status(400).json({ msg: 'Client email not found for this invoice.' });
+        }
+
+        const clientEmail = invoice.projectId.clientId.email;
+        const clientName = invoice.projectId.clientId.name || 'Client';
+        const invoiceNumber = invoice.invoiceNumber;
+        const invoiceAmount = invoice.amount.toFixed(2);
+        const dueDate = new Date(invoice.dueDate).toLocaleDateString();
+        const projectName = invoice.projectId.title;
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: EMAIL_USER,
+                pass: EMAIL_PASS
+            }
+        });
+
+        const mailOptions = {
+            from: EMAIL_USER,
+            to: clientEmail,
+            subject: `Invoice #${invoiceNumber} from Webflare Design Co.`,
+            html: `
+                <p>Hello ${clientName},</p>
+                <p>Please find below the details for your invoice from Webflare Design Co.:</p>
+                <ul>
+                    <li><strong>Invoice Number:</strong> ${invoiceNumber}</li>
+                    <li><strong>Project:</strong> ${projectName}</li>
+                    <li><strong>Amount Due:</strong> $${invoiceAmount}</li>
+                    <li><strong>Due Date:</strong> ${dueDate}</li>
+                    <li><strong>Status:</strong> ${invoice.status}</li>
+                </ul>
+                <p>You can view your invoice details by logging into your client portal.</p>
+                <p>Thank you for your business!</p>
+                <p>Regards,</p>
+                <p>The Webflare Design Co. Team</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ msg: `Invoice ${invoiceNumber} sent successfully to ${clientEmail}.` });
+
+    } catch (err) {
+        console.error('Error sending invoice email:', err);
+        res.status(500).send('Server error sending invoice email.');
+    }
+});
 
 // == PUBLIC & DASHBOARD ==
 app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
