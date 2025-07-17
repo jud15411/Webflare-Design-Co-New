@@ -7,7 +7,8 @@ function Invoices() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
-  const [newInvoice, setNewInvoice] = useState({ invoiceNumber: '', amount: 0, dueDate: '', projectId: '', status: 'Draft' });
+  // Correctly initialize newInvoice state without the invoiceNumber
+  const [newInvoice, setNewInvoice] = useState({ amount: 0, dueDate: '', projectId: '', status: 'Draft' });
 
   const token = localStorage.getItem('token');
 
@@ -28,7 +29,7 @@ function Invoices() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (editingInvoice) {
+    if (showEditModal) {
       setEditingInvoice({ ...editingInvoice, [name]: value });
     } else {
       setNewInvoice({ ...newInvoice, [name]: value });
@@ -43,6 +44,7 @@ function Invoices() {
       body: JSON.stringify(newInvoice)
     });
     setShowAddModal(false);
+    setNewInvoice({ amount: 0, dueDate: '', projectId: '', status: 'Draft' }); // Reset form
     fetchData();
   };
 
@@ -115,17 +117,34 @@ function Invoices() {
         </table>
       </div>
 
-      { (showAddModal || (showEditModal && editingInvoice)) && (
+      {/* Add Invoice Modal */}
+      {showAddModal && (
         <div className="modal-backdrop">
           <div className="modal-content">
-            <div className="modal-header"><h2 className="modal-title">{showEditModal ? 'Edit Invoice' : 'Add New Invoice'}</h2><button className="close-button" onClick={() => { setShowAddModal(false); setShowEditModal(false); }}>&times;</button></div>
-            <form onSubmit={showEditModal ? handleUpdateInvoice : handleAddInvoice}>
-              <div className="form-group"><label>Invoice Number</label><input type="text" name="invoiceNumber" value={editingInvoice.invoiceNumber} readOnly /></div>
-              <div className="form-group"><label>Project</label><select name="projectId" value={showEditModal ? editingInvoice.projectId._id : newInvoice.projectId} onChange={handleInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
-              <div className="form-group"><label>Amount ($)</label><input type="number" name="amount" value={showEditModal ? editingInvoice.amount : newInvoice.amount} onChange={handleInputChange} required /></div>
-              <div className="form-group"><label>Due Date</label><input type="date" name="dueDate" value={showEditModal ? editingInvoice.dueDate : newInvoice.dueDate} onChange={handleInputChange} required /></div>
-              <div className="form-group"><label>Status</label><select name="status" value={showEditModal ? editingInvoice.status : newInvoice.status} onChange={handleInputChange}><option>Draft</option><option>Sent</option><option>Paid</option><option>Overdue</option></select></div>
-              <button type="submit" className="add-button">{showEditModal ? 'Update Invoice' : 'Save Invoice'}</button>
+            <div className="modal-header"><h2 className="modal-title">Add New Invoice</h2><button className="close-button" onClick={() => setShowAddModal(false)}>&times;</button></div>
+            <form onSubmit={handleAddInvoice}>
+              <div className="form-group"><label>Project</label><select name="projectId" value={newInvoice.projectId} onChange={handleInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
+              <div className="form-group"><label>Amount ($)</label><input type="number" name="amount" value={newInvoice.amount} onChange={handleInputChange} required /></div>
+              <div className="form-group"><label>Due Date</label><input type="date" name="dueDate" value={newInvoice.dueDate} onChange={handleInputChange} required /></div>
+              <div className="form-group"><label>Status</label><select name="status" value={newInvoice.status} onChange={handleInputChange}><option>Draft</option><option>Sent</option><option>Paid</option><option>Overdue</option></select></div>
+              <button type="submit" className="add-button">Save Invoice</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Invoice Modal */}
+      {showEditModal && editingInvoice && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div className="modal-header"><h2 className="modal-title">Edit Invoice</h2><button className="close-button" onClick={() => setShowEditModal(false)}>&times;</button></div>
+            <form onSubmit={handleUpdateInvoice}>
+                <div className="form-group"><label>Invoice Number</label><input type="text" name="invoiceNumber" value={editingInvoice.invoiceNumber} readOnly /></div>
+                <div className="form-group"><label>Project</label><select name="projectId" value={editingInvoice.projectId?._id} onChange={handleInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
+                <div className="form-group"><label>Amount ($)</label><input type="number" name="amount" value={editingInvoice.amount} onChange={handleInputChange} required /></div>
+                <div className="form-group"><label>Due Date</label><input type="date" name="dueDate" value={editingInvoice.dueDate} onChange={handleInputChange} required /></div>
+                <div className="form-group"><label>Status</label><select name="status" value={editingInvoice.status} onChange={handleInputChange}><option>Draft</option><option>Sent</option><option>Paid</option><option>Overdue</option></select></div>
+                <button type="submit" className="add-button">Update Invoice</button>
             </form>
           </div>
         </div>
