@@ -403,43 +403,6 @@ app.delete('/api/users/:id', authMiddleware, ceoOnlyMiddleware, async (req, res)
 
 // == PROJECTS ==
 
-// Get a single project by ID for admin panel
-app.get('/api/projects/:id', authMiddleware, async (req, res) => {
-    try {
-        const projectId = req.params.id;
-
-        // Validate if projectId is a valid MongoDB ObjectId
-        if (!mongoose.Types.ObjectId.isValid(projectId)) {
-            return res.status(400).json({ msg: 'Invalid Project ID format.' });
-        }
-
-        const project = await Project.findById(projectId)
-            .populate('clientId', 'name') // Populate client name
-            .populate({ // Populate milestones for the project detail view
-                path: 'milestones',
-                model: 'Milestone',
-                populate: { // Optionally populate tasks and assignees within milestones
-                    path: 'tasks',
-                    model: 'Task',
-                    populate: {
-                        path: 'assignedTo',
-                        model: 'User',
-                        select: 'name'
-                    }
-                }
-            });
-
-        if (!project) {
-            return res.status(404).json({ msg: 'Project not found.' });
-        }
-        res.json(project);
-    } catch (err) {
-        console.error('Error fetching single project:', err);
-        res.status(500).json({ msg: 'Server Error fetching project details.' }); // Ensure JSON response
-    }
-});
-
-
 // Get ALL projects for the admin panel list view
 app.get('/api/projects', authMiddleware, async (req, res) => {
     try {
