@@ -4,6 +4,8 @@
   color: #ecf0f1;
   height: 100vh;
   flex-shrink: 0;
+  position: sticky; /* Add this */
+  top: 0;           /* Add this */
 }
 
 .sidebar-header {
@@ -25,7 +27,6 @@
   margin: 0;
 }
 
-/* This now targets the button or the NavLink's <a> tag */
 .sidebar-nav li button,
 .sidebar-nav li a {
   display: block;
@@ -40,7 +41,7 @@
   font-size: inherit;
   cursor: pointer;
   transition: background-color 0.2s;
-  box-sizing: border-box; /* This is the fix */
+  box-sizing: border-box; 
 }
 
 .sidebar-nav li button:hover,
@@ -48,7 +49,6 @@
   background-color: #34495e;
 }
 
-/* This selector is UPDATED to style the active NavLink */
 .sidebar-nav li a.active {
   background-color: #1abc9c;
   color: #fff;
@@ -56,7 +56,7 @@
 }
 
 .nav-link-logout {
-  width: 100%; /* Ensure logout button takes full width */
+  width: 100%; 
 }
 
 .nav-link-logout:hover {

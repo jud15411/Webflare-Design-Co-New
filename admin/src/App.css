@@ -1,16 +1,31 @@
-body {
+/*
+  This ensures the root of your app and the body take up the full height,
+  preventing weird scrolling behavior.
+*/
+html, body, #root {
+  height: 100%;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background-color: #f4f7f6;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
 }
 
+/* This is the main layout container for the sidebar and content.
+  Using flexbox makes alignment simple.
+*/
 .app-layout {
   display: flex;
+  height: 100%;
 }
 
+/*
+  This is the key part for the content area.
+  - flex-grow: 1 makes it take up all available space next to the sidebar.
+  - overflow-y: auto adds a scrollbar ONLY when the content is taller than the screen.
+*/
 .main-content {
   flex-grow: 1;
-  padding: 30px;
-  height: 100vh;
   overflow-y: auto;
+  padding: 30px;
 }
