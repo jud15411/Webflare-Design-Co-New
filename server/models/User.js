@@ -20,7 +20,9 @@ const UserSchema = new mongoose.Schema({
     enum: ['CEO', 'CTO', 'Developer', 'Sales'],
     default: 'Developer',
     required: true
-  }
+  },
+  emailVerificationToken: String, // Add this line
+  isEmailVerified: { type: Boolean, default: false } // Add this line
 });
 
 module.exports = mongoose.model('User', UserSchema);

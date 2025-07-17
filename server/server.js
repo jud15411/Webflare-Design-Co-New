@@ -7,10 +7,14 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto'); // Add this line for token generation
+const nodemailer = require('nodemailer'); // Add this line for sending emails
 
 // --- Read Environment Variables ---
 const JWT_SECRET = process.env.JWT_SECRET;
 const MONGO_URI = process.env.MONGO_URI;
+const EMAIL_USER = process.env.EMAIL_USER; // Add this line
+const EMAIL_PASS = process.env.EMAIL_PASS; // Add this line
 
 // --- Initialize App & Models ---
 const app = express();
@@ -97,6 +101,10 @@ app.post('/api/auth/login', async (req, res) => {
         const { email, password } = req.body;
         const user = await User.findOne({ email });
         if (!user) return res.status(400).json({ msg: 'Invalid credentials' });
+        // NEW: Check if email is verified
+        if (!user.isEmailVerified) { // Add this block
+            return res.status(401).json({ msg: 'Please verify your email to log in.' }); //
+        } //
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
         const payload = { id: user.id, role: user.role };
@@ -129,11 +137,38 @@ app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, re
         let user = await User.findOne({ email });
         if (user) return res.status(400).json({ msg: 'User already exists' });
         
-        user = new User({ name, email, password, role });
+        // Generate verification token
+        const emailVerificationToken = crypto.randomBytes(20).toString('hex'); //
+
+        user = new User({ name, email, password, role, emailVerificationToken }); // Add token to user
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(password, salt);
         await user.save();
         
+        // Send verification email
+        const transporter = nodemailer.createTransport({ //
+            service: 'gmail', //
+            auth: { //
+                user: EMAIL_USER, //
+                pass: EMAIL_PASS //
+            } //
+        }); //
+
+        const mailOptions = { //
+            from: EMAIL_USER, //
+            to: user.email, //
+            subject: 'Verify Your Email for Webflare Design Co.', //
+            html: `Please click this link to verify your email: <a href="https://webflare-admin.netlify.app/api/auth/verify-email?token=${emailVerificationToken}">Verify Email</a>` //
+        }; //
+
+        transporter.sendMail(mailOptions, (error, info) => { //
+            if (error) { //
+                console.error('Error sending verification email:', error); //
+            } else { //
+                console.log('Verification email sent:', info.response); //
+            } //
+        }); //
+
         const ceo = await User.findOne({ role: 'CEO' });
         const creator = await User.findById(req.userId);
         if (ceo && ceo._id.toString() !== creator._id.toString()) {
@@ -141,9 +176,30 @@ app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, re
             new Notification({ recipient: ceo._id, message, link: `/users` }).save();
         }
 
-        res.status(201).json({ msg: 'User registered successfully', userId: user._id });
+        res.status(201).json({ msg: 'User registered successfully. A verification email has been sent to your email address.', userId: user._id }); // Update response message
     } catch (err) { res.status(500).send('Server error'); }
 });
+
+// NEW: Email verification route
+app.get('/api/auth/verify-email', async (req, res) => { //
+    try { //
+        const { token } = req.query; //
+        const user = await User.findOne({ emailVerificationToken: token }); //
+
+        if (!user) { //
+            return res.status(400).send('Invalid or expired verification token.'); //
+        } //
+
+        user.isEmailVerified = true; //
+        user.emailVerificationToken = undefined; // Clear the token after verification
+        await user.save(); //
+
+        res.send('Email verified successfully! You can now log in.'); //
+    } catch (err) { //
+        console.error('Email verification error:', err); //
+        res.status(500).send('Server Error during email verification.'); //
+    } //
+}); //
 
 app.get('/api/users', authMiddleware, adminOnlyMiddleware, async (req, res) => {
     try {
@@ -466,7 +522,7 @@ app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
                 { $group: { _id: null, total: { $sum: '$hours' } } }
             ])
         ]);
-        const invoicesDue = unpaidInvoicesResult.length > 0 ? unpaidInvoicesResult[0].total : 0;
+        const invoicesDue = unpaidInvoicesResult.length > 0 ? unpaidInpaidInvoicesResult[0].total : 0;
         const hoursToday = timeEntriesToday.length > 0 ? timeEntriesToday[0].total : 0;
         res.json({ activeProjects, pendingTasks, invoicesDue, recentProjects, hoursToday });
     } catch (err) { 
