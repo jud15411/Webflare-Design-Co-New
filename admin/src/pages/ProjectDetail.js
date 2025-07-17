@@ -5,6 +5,7 @@ import './ProjectDetail.css'; // For project detail specific styles
 
 function ProjectDetail() {
   const { projectId } = useParams();
+  console.log('Project ID received by ProjectDetail:', projectId);
   const [project, setProject] = useState(null);
   const [milestones, setMilestones] = useState([]); // State for milestones
   const [isLoading, setIsLoading] = useState(true);
