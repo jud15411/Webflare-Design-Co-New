@@ -130,16 +130,21 @@ function Projects() {
     return <ProjectDetail project={selectedProject} token={token} onBack={() => setSelectedProject(null)} />;
   }
 
+  const featuredCount = projects.filter(p => p.isFeatured).length;
+
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Projects</h1>
+        <div className="page-title-group">
+          <h1 className="page-title">Projects</h1>
+          <span className="featured-count-indicator">
+            {featuredCount} / 5 Featured
+          </span>
+        </div>
         <button className="add-button" onClick={() => { setNewProject({ title: '', description: '', status: 'Planning', clientId: '' }); setShowAddModal(true); }}>+ Add Project</button>
       </div>
-
-      <div style={{ marginBottom: '20px', padding: '10px', borderRadius: '5px', background: error ? '#ffebee' : '#e8f5e9', color: error ? '#c62828' : '#2e7d32' }}>
-        {error ? `Error: ${error}` : `You have ${projects.filter(p => p.isFeatured).length} out of 5 featured projects.`}
-      </div>
+      
+      {error && <div className="error-banner">Error: {error}</div>}
       
       <div className="data-table-container">
         <table>
@@ -158,17 +163,18 @@ function Projects() {
                     <td className="actions-cell">
                       <button className="edit-button" onClick={() => openEditModal(project)}>Edit</button>
                       <button className="delete-button" onClick={() => handleDeleteProject(project._id)}>Delete</button>
-                      <button onClick={() => handleToggleFeature(project._id)}>{project.isFeatured ? 'Un-feature' : 'Feature'}</button>
+                      <button className="feature-button" onClick={() => handleToggleFeature(project._id)}>{project.isFeatured ? 'Un-feature' : 'Feature'}</button>
                     </td>
                   </tr>
                 ))
             ) : (
-                <tr><td colSpan="5">No projects found. Try adding one!</td></tr>
+                <tr><td colSpan="6">No projects found. Try adding one!</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
+      {/* Add & Edit Modals (no changes needed here) */}
       {showAddModal && (
         <div className="modal-backdrop">
           <div className="modal-content">
