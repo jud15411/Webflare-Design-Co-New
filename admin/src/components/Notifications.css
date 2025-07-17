@@ -28,8 +28,9 @@
 
 .notification-panel {
   position: absolute;
-  top: 55px; /* Adjust spacing from the top */
-  right: 5px;  /* Adjust spacing from the right edge */
+  top: 55px;
+  /* This value is changed to shift the panel and make it fully visible */
+  right: -110px;
   width: 350px;
   background-color: #fff;
   border-radius: 8px;

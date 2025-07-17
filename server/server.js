@@ -26,7 +26,7 @@ const Comment = require('./models/Comment');
 const TimeEntry = require('./models/TimeEntry');
 const Notification = require('./models/Notification');
 const Counter = require('./models/Counter');
-const File = require('./models/File'); // Import the File model
+const File = require('./models/File');
 
 // --- Middleware ---
 app.use(cors());
@@ -42,7 +42,6 @@ const projectImageStorage = multer.diskStorage({
 });
 const uploadProjectImage = multer({ storage: projectImageStorage }).single('projectImage');
 
-// New Multer config for project-specific files
 const projectFileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = `public/project_files/${req.params.projectId}`;
@@ -110,26 +109,6 @@ app.get('/api/auth/user', authMiddleware, async (req, res) => {
     res.json(user);
 });
 
-app.put('/api/auth/user', authMiddleware, async (req, res) => {
-    const { name, email } = req.body;
-    const updatedUser = await User.findByIdAndUpdate(req.userId, { name, email }, { new: true }).select('-password');
-    res.json(updatedUser);
-});
-
-app.put('/api/auth/change-password', authMiddleware, async (req, res) => {
-    try {
-        const { currentPassword, newPassword } = req.body;
-        const user = await User.findById(req.userId);
-        if (!user) return res.status(404).json({ msg: 'User not found' });
-        const isMatch = await bcrypt.compare(currentPassword, user.password);
-        if (!isMatch) return res.status(400).json({ msg: 'Incorrect current password' });
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(newPassword, salt);
-        await user.save();
-        res.json({ msg: 'Password updated successfully' });
-    } catch (err) { res.status(500).send('Server Error'); }
-});
-
 app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
@@ -139,26 +118,129 @@ app.post('/api/auth/register', authMiddleware, ceoOnlyMiddleware, async (req, re
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(password, salt);
         await user.save();
+        
+        // Notify CEO of new user registration
+        const ceo = await User.findOne({ role: 'CEO' });
+        const creator = await User.findById(req.userId);
+        if (ceo && ceo._id.toString() !== creator._id.toString()) {
+            const message = `${creator.name} registered a new user: ${user.name} (${user.role}).`;
+            new Notification({ recipient: ceo._id, message, link: `/addUser` }).save();
+        }
+
         res.status(201).send('User registered successfully');
     } catch (err) { res.status(500).send('Server error'); }
 });
 
-app.get('/api/users', authMiddleware, adminOnlyMiddleware, async (req, res) => {
-    const users = await User.find().select('-password');
-    res.json(users);
+// PROJECTS
+app.post('/api/projects', authMiddleware, (req, res) => {
+    uploadProjectImage(req, res, async (err) => {
+        if(err) return res.status(500).json({ msg: err });
+        const { title, description, status, clientId } = req.body;
+        const imageUrl = req.file ? `public/uploads/${req.file.filename}` : '';
+        const newProject = new Project({ title, description, status, clientId, imageUrl });
+        try {
+            await newProject.save();
+
+            // Notify CEO of new project
+            const ceo = await User.findOne({ role: 'CEO' });
+            if (ceo) {
+                const creator = await User.findById(req.userId);
+                const message = `${creator.name} created a new project: "${newProject.title}".`;
+                new Notification({ recipient: ceo._id, message, link: `/projects` }).save();
+            }
+
+            res.status(201).json(newProject);
+        } catch (serverErr) { res.status(500).send('Server error on save'); }
+    });
 });
 
-app.put('/api/users/:id/role', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
-    const { role } = req.body;
-    const updatedUser = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-password');
-    res.json(updatedUser);
+// TASKS
+app.post('/api/tasks', authMiddleware, async (req, res) => {
+    const task = new Task(req.body);
+    await task.save();
+    
+    // Notify user of new task assignment
+    if (task.assignedTo) {
+        const author = await User.findById(req.userId);
+        const project = await Project.findById(task.projectId);
+        const message = `${author.name} assigned you a new task: "${task.title}" for project "${project.title}".`;
+        new Notification({ recipient: task.assignedTo, message, link: `/tasks` }).save();
+    }
+    res.status(201).json(task);
 });
 
-app.delete('/api/users/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => {
-    await User.findByIdAndDelete(req.params.id);
-    res.json({ msg: 'User deleted successfully' });
+app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
+    try {
+        const { status } = req.body;
+        const updatedTask = await Task.findByIdAndUpdate(req.params.taskId, { status }, { new: true });
+        if (!updatedTask) return res.status(404).json({ msg: 'Task not found' });
+
+        const updater = await User.findById(req.userId);
+
+        // Notify assigned user of status update
+        if (updatedTask.assignedTo && updatedTask.assignedTo.toString() !== updater._id.toString()) {
+            const message = `${updater.name} updated the status of your task "${updatedTask.title}" to "${status}".`;
+            new Notification({ recipient: updatedTask.assignedTo, message, link: `/tasks` }).save();
+        }
+
+        // Notify CEO if a task is completed
+        if (status === 'Done') {
+            const ceo = await User.findOne({ role: 'CEO' });
+            if (ceo && ceo._id.toString() !== updater._id.toString()) {
+                 const message = `${updater.name} completed the task: "${updatedTask.title}".`;
+                 new Notification({ recipient: ceo._id, message, link: `/tasks` }).save();
+            }
+        }
+        
+        res.json(updatedTask);
+    } catch (err) { res.status(500).send('Server Error'); }
 });
 
+
+// INVOICES
+app.post('/api/invoices', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        const counter = await Counter.findOneAndUpdate({ _id: 'invoiceNumber' }, { $inc: { sequence_value: 1 } }, { new: true, upsert: true });
+        const newInvoiceNumber = `WDC-${String(counter.sequence_value).padStart(4, '0')}`;
+        const newInvoice = new Invoice({ ...req.body, invoiceNumber: newInvoiceNumber });
+        await newInvoice.save();
+
+        // Notify CEO of new invoice
+        const ceo = await User.findOne({ role: 'CEO' });
+        if (ceo) {
+            const creator = await User.findById(req.userId);
+            const message = `A new invoice (${newInvoice.invoiceNumber}) was created by ${creator.name}.`;
+            new Notification({ recipient: ceo._id, message, link: `/invoices` }).save();
+        }
+
+        res.status(201).json(newInvoice);
+
+    } catch (err) {
+        console.error("Error creating invoice:", err);
+        res.status(500).send('Server Error');
+    }
+});
+
+
+// CONTRACTS
+app.post('/api/contracts', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    const newContract = await new Contract(req.body).save();
+
+    // Notify CEO of new contract
+    const ceo = await User.findOne({ role: 'CEO' });
+    if (ceo) {
+        const creator = await User.findById(req.userId);
+        const project = await Project.findById(newContract.projectId);
+        const client = await Client.findById(project.clientId);
+        const message = `A new contract for ${client.name} (${project.title}) was created by ${creator.name}.`;
+        new Notification({ recipient: ceo._id, message, link: `/contracts` }).save();
+    }
+    
+    res.status(201).json(newContract);
+});
+
+
+// ... (The rest of your server.js routes remain unchanged)
 // == DASHBOARD & PUBLIC ROUTES ==
 app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
     try {
@@ -178,14 +260,12 @@ app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
         res.json({ activeProjects, pendingTasks, invoicesDue, recentProjects });
     } catch (err) { res.status(500).send('Server Error'); }
 });
-
 app.get('/api/featured-projects', async (req, res) => {
     try {
         const featured = await Project.find({ isFeatured: true }).limit(5);
         res.json(featured);
     } catch (err) { res.status(500).send('Server Error'); }
 });
-
 app.get('/api/services', async (req, res) => {
     try {
         const services = await Service.find();
@@ -193,9 +273,6 @@ app.get('/api/services', async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 app.use('/uploads', express.static('uploads'));
-
-// == CORE PROTECTED ROUTES ==
-// PROJECTS
 app.get('/api/projects', async (req, res) => {
     try {
         const projects = await Project.aggregate([
@@ -207,18 +284,6 @@ app.get('/api/projects', async (req, res) => {
         ]);
         res.json(projects);
     } catch (err) { res.status(500).send('Server Error'); }
-});
-app.post('/api/projects', authMiddleware, (req, res) => {
-    uploadProjectImage(req, res, async (err) => {
-        if(err) return res.status(500).json({ msg: err });
-        const { title, description, status, clientId } = req.body;
-        const imageUrl = req.file ? `public/uploads/${req.file.filename}` : '';
-        const newProject = new Project({ title, description, status, clientId, imageUrl });
-        try {
-            await newProject.save();
-            res.status(201).json(newProject);
-        } catch (serverErr) { res.status(500).send('Server error on save'); }
-    });
 });
 app.put('/api/projects/:id', authMiddleware, (req, res) => {
     uploadProjectImage(req, res, async (err) => {
@@ -260,8 +325,6 @@ app.put('/api/projects/:id/toggle-feature', authMiddleware, async (req, res) => 
         res.json(project);
     } catch (err) { res.status(500).send('Server Error'); }
 });
-
-// GET all files for a specific project
 app.get('/api/projects/:projectId/files', authMiddleware, async (req, res) => {
     try {
         const files = await File.find({ projectId: req.params.projectId }).sort({ createdAt: 'desc' });
@@ -271,8 +334,6 @@ app.get('/api/projects/:projectId/files', authMiddleware, async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
-
-// POST (upload) a new file to a project
 app.post('/api/projects/:projectId/files', authMiddleware, (req, res) => {
     uploadProjectFile(req, res, async (err) => {
         if (err) {
@@ -302,27 +363,11 @@ app.post('/api/projects/:projectId/files', authMiddleware, (req, res) => {
         }
     });
 });
-
-
-// CLIENTS
 app.get('/api/clients', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Client.find()));
 app.post('/api/clients', authMiddleware, adminOnlyMiddleware, async (req, res) => res.status(201).json(await new Client(req.body).save()));
 app.put('/api/clients/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Client.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/clients/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Client.findByIdAndDelete(req.params.id)));
-
-// TASKS
 app.get('/api/tasks', authMiddleware, async (req, res) => res.json(await Task.find().populate({ path: 'projectId', select: 'title' }).populate({ path: 'assignedTo', select: 'name' })));
-app.post('/api/tasks', authMiddleware, async (req, res) => {
-    const task = new Task(req.body);
-    await task.save();
-    if (task.assignedTo) {
-        const author = await User.findById(req.userId);
-        const project = await Project.findById(task.projectId);
-        const message = `${author.name} assigned you a new task: "${task.title}" for project "${project.title}"`;
-        new Notification({ recipient: task.assignedTo, message, link: `/tasks` }).save();
-    }
-    res.status(201).json(task);
-});
 app.put('/api/tasks/:taskId', authMiddleware, async (req, res) => {
     try {
         const updatedTask = await Task.findByIdAndUpdate(req.params.taskId, req.body, { new: true });
@@ -330,58 +375,15 @@ app.put('/api/tasks/:taskId', authMiddleware, async (req, res) => {
         res.json(updatedTask);
     } catch (err) { res.status(500).send('Server Error'); }
 });
-app.put('/api/tasks/:taskId/status', authMiddleware, async (req, res) => {
-    try {
-        const { status } = req.body;
-        const updatedTask = await Task.findByIdAndUpdate(req.params.taskId, { status }, { new: true });
-        if (!updatedTask) return res.status(404).json({ msg: 'Task not found' });
-        res.json(updatedTask);
-    } catch (err) { res.status(500).send('Server Error'); }
-});
-
-// INVOICES
 app.get('/api/invoices', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Invoice.find().populate({ path: 'projectId', populate: { path: 'clientId' } })));
-app.post('/api/invoices', authMiddleware, adminOnlyMiddleware, async (req, res) => {
-    try {
-        // Find the counter for invoices and increment it
-        const counter = await Counter.findOneAndUpdate(
-            { _id: 'invoiceNumber' },
-            { $inc: { sequence_value: 1 } },
-            { new: true, upsert: true } // Create the counter if it doesn't exist
-        );
-
-        // Format the new invoice number
-        const newInvoiceNumber = `WDC-${String(counter.sequence_value).padStart(4, '0')}`;
-
-        // Create the new invoice with the generated number
-        const newInvoice = new Invoice({
-            ...req.body,
-            invoiceNumber: newInvoiceNumber
-        });
-
-        await newInvoice.save();
-        res.status(201).json(newInvoice);
-
-    } catch (err) {
-        console.error("Error creating invoice:", err);
-        res.status(500).send('Server Error');
-    }
-});
 app.put('/api/invoices/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Invoice.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/invoices/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Invoice.findByIdAndDelete(req.params.id)));
-
-// CONTRACTS
 app.get('/api/contracts', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.find().populate({ path: 'projectId', populate: { path: 'clientId' } })));
-app.post('/api/contracts', authMiddleware, adminOnlyMiddleware, async (req, res) => res.status(201).json(await new Contract(req.body).save()));
 app.put('/api/contracts/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/contracts/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.findByIdAndDelete(req.params.id)));
-
-// SERVICES (Management)
 app.post('/api/services', authMiddleware, ceoOnlyMiddleware, async (req, res) => { /* ... */ });
 app.put('/api/services/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => { /* ... */ });
 app.delete('/api/services/:id', authMiddleware, ceoOnlyMiddleware, async (req, res) => { /* ... */ });
-
-// COMMENTS
 app.get('/api/projects/:projectId/comments', authMiddleware, async (req, res) => {
     try {
         const comments = await Comment.find({ project: req.params.projectId }).sort({ createdAt: 'desc' }).populate('author', 'name');
@@ -401,8 +403,6 @@ app.post('/api/projects/:projectId/comments', authMiddleware, async (req, res) =
         res.status(201).json(populatedComment);
     } catch (err) { res.status(500).send('Server Error'); }
 });
-
-// TIME TRACKING
 app.post('/api/tasks/:taskId/time', authMiddleware, async (req, res) => {
     try {
         const { hours, description } = req.body;
@@ -424,8 +424,6 @@ app.get('/api/reports/time-by-project', authMiddleware, adminOnlyMiddleware, asy
         res.json(timeReport);
     } catch (err) { res.status(500).send('Server Error'); }
 });
-
-// NOTIFICATIONS
 app.get('/api/notifications', authMiddleware, async (req, res) => {
     try {
         const notifications = await Notification.find({ recipient: req.userId, isRead: false }).sort({ createdAt: -1 });
@@ -439,7 +437,6 @@ app.put('/api/notifications/mark-read', authMiddleware, async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// --- Start Server ---
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
