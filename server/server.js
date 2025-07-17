@@ -26,6 +26,7 @@ const Comment = require('./models/Comment');
 const TimeEntry = require('./models/TimeEntry');
 const Notification = require('./models/Notification');
 const Counter = require('./models/Counter');
+const File = require('./models/File'); // Import the File model
 
 // --- Middleware ---
 app.use(cors());
@@ -33,13 +34,27 @@ app.use(express.json());
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // --- Multer Config ---
-const storage = multer.diskStorage({
+const projectImageStorage = multer.diskStorage({
   destination: './public/uploads/',
   filename: (req, file, cb) => {
-    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+    cb(null, 'projectImage-' + Date.now() + path.extname(file.originalname));
   }
 });
-const upload = multer({ storage: storage }).single('projectImage');
+const uploadProjectImage = multer({ storage: projectImageStorage }).single('projectImage');
+
+// New Multer config for project-specific files
+const projectFileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = `public/project_files/${req.params.projectId}`;
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  }
+});
+const uploadProjectFile = multer({ storage: projectFileStorage }).single('projectFile');
+
 
 // --- DB Connection ---
 mongoose.connect(MONGO_URI).then(() => console.log("MongoDB Connected!")).catch(err => console.error(err));
@@ -177,6 +192,7 @@ app.get('/api/services', async (req, res) => {
         res.json(services);
     } catch (err) { res.status(500).send('Server Error'); }
 });
+app.use('/uploads', express.static('uploads'));
 
 // == CORE PROTECTED ROUTES ==
 // PROJECTS
@@ -193,7 +209,7 @@ app.get('/api/projects', async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 app.post('/api/projects', authMiddleware, (req, res) => {
-    upload(req, res, async (err) => {
+    uploadProjectImage(req, res, async (err) => {
         if(err) return res.status(500).json({ msg: err });
         const { title, description, status, clientId } = req.body;
         const imageUrl = req.file ? `public/uploads/${req.file.filename}` : '';
@@ -205,7 +221,7 @@ app.post('/api/projects', authMiddleware, (req, res) => {
     });
 });
 app.put('/api/projects/:id', authMiddleware, (req, res) => {
-    upload(req, res, async (err) => {
+    uploadProjectImage(req, res, async (err) => {
         if (err) return res.status(500).json({ msg: err });
         try {
             const project = await Project.findById(req.params.id);
@@ -244,6 +260,49 @@ app.put('/api/projects/:id/toggle-feature', authMiddleware, async (req, res) => 
         res.json(project);
     } catch (err) { res.status(500).send('Server Error'); }
 });
+
+// GET all files for a specific project
+app.get('/api/projects/:projectId/files', authMiddleware, async (req, res) => {
+    try {
+        const files = await File.find({ projectId: req.params.projectId }).sort({ createdAt: 'desc' });
+        res.json(files);
+    } catch (err) {
+        console.error("Error fetching project files:", err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// POST (upload) a new file to a project
+app.post('/api/projects/:projectId/files', authMiddleware, (req, res) => {
+    uploadProjectFile(req, res, async (err) => {
+        if (err) {
+            return res.status(500).json({ msg: "File upload failed", error: err.message });
+        }
+        if (req.file === undefined) {
+            return res.status(400).json({ msg: 'No file selected' });
+        }
+
+        try {
+            const { originalname, path: filePath, mimetype, size } = req.file;
+            const webPath = `/${filePath.replace(/\\/g, '/')}`;
+
+            const newFile = new File({
+                originalName: originalname,
+                path: webPath,
+                mimetype: mimetype,
+                size: size,
+                projectId: req.params.projectId,
+            });
+
+            await newFile.save();
+            res.status(201).json(newFile);
+        } catch (serverErr) {
+            console.error("Error saving file record:", serverErr);
+            res.status(500).send('Server error on file save');
+        }
+    });
+});
+
 
 // CLIENTS
 app.get('/api/clients', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Client.find()));

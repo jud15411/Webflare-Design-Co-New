@@ -13,6 +13,98 @@
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-bottom: 30px;
+}
+
+.file-section {
+  background: #fff;
+  padding: 20px 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-bottom: 30px;
+}
+
+.file-section h3, .comment-section h3 {
+  margin-top: 0;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+}
+
+.file-upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.file-upload-form .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.file-upload-form label {
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #34495e;
+}
+
+.file-upload-form input[type="file"] {
+  border: 1px solid #ccc;
+  padding: 8px;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.upload-button {
+  align-self: flex-start;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.upload-button:hover {
+  background-color: #2980b9;
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 0.9rem;
+  margin: -5px 0 0 0;
+}
+
+.file-list ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.file-item {
+  padding: 12px;
+  border-bottom: 1px solid #f2f2f2;
+}
+
+.file-item:last-child {
+  border-bottom: none;
+}
+
+.file-item a {
+  font-weight: 500;
+  color: #2980b9;
+  text-decoration: none;
+}
+.file-item a:hover {
+  text-decoration: underline;
+}
+
+.file-meta {
+  font-size: 0.85rem;
+  color: #7f8c8d;
 }
 
 .comment-section {
@@ -65,7 +157,7 @@
 
 .comment-text {
   margin: 0 0 10px 0;
-  white-space: pre-wrap; /* Preserves line breaks in comments */
+  white-space: pre-wrap;
 }
 
 .comment-meta {
