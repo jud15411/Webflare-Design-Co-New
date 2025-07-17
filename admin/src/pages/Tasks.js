@@ -52,6 +52,7 @@ function Tasks() {
   const [editingTask, setEditingTask] = useState(null);
 
   const [newTask, setNewTask] = useState({ title: '', description: '', projectId: '', assignedTo: '' });
+  const [timeLog, setTimeLog] = useState({ hours: '', description: '' });
   
   const token = localStorage.getItem('token');
 
@@ -64,15 +65,12 @@ function Tasks() {
             fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
             fetch(`${process.env.REACT_APP_API_URL}/api/users`, { headers: { 'x-auth-token': token } })
         ]);
-
         if (!tasksRes.ok || !projectsRes.ok || !usersRes.ok) {
             throw new Error('A network error occurred while fetching data.');
         }
-
         const tasksData = await tasksRes.json();
         const projectsData = await projectsRes.json();
         const usersData = await usersRes.json();
-
         setTasks(tasksData);
         setProjects(projectsData);
         setUsers(usersData);
@@ -118,6 +116,10 @@ function Tasks() {
     }
   };
 
+  const handleTimeLogInputChange = (e) => {
+    setTimeLog({ ...timeLog, [e.target.name]: e.target.value });
+  };
+
   const handleAddTask = async (e) => {
     e.preventDefault();
     await fetch(`${process.env.REACT_APP_API_URL}/api/tasks`, {
@@ -142,9 +144,19 @@ function Tasks() {
       headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
       body: JSON.stringify(editingTask)
     });
-    setShowEditModal(false);
-    setEditingTask(null);
+    // We keep the modal open after updating to allow for time logging
     fetchData();
+  };
+
+  const handleLogTime = async (e) => {
+    e.preventDefault();
+    await fetch(`${process.env.REACT_APP_API_URL}/api/tasks/${editingTask._id}/time`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify(timeLog)
+    });
+    setTimeLog({ hours: '', description: '' });
+    setShowEditModal(false); 
   };
   
   const columns = ['To Do', 'In Progress', 'On Hold', 'Done'];
@@ -186,6 +198,13 @@ function Tasks() {
               <div className="form-group"><label>Assign To</label><select name="assignedTo" value={editingTask.assignedTo?._id || editingTask.assignedTo} onChange={handleInputChange}><option value="">Unassigned</option>{users.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}</select></div>
               <div className="form-group"><label>Status</label><select name="status" value={editingTask.status} onChange={handleInputChange}><option value="To Do">To Do</option><option value="In Progress">In Progress</option><option value="On Hold">On Hold</option><option value="Done">Done</option></select></div>
               <button type="submit" className="add-button">Update Task</button>
+            </form>
+            <hr style={{ margin: '30px 0' }} />
+            <form onSubmit={handleLogTime}>
+              <h3>Log Time for This Task</h3>
+              <div className="form-group"><label>Hours</label><input type="number" step="0.1" name="hours" value={timeLog.hours} onChange={handleTimeLogInputChange} required /></div>
+              <div className="form-group"><label>Work Description (Optional)</label><textarea name="description" rows="2" value={timeLog.description} onChange={handleTimeLogInputChange}></textarea></div>
+              <button type="submit" className="add-button">Log Time</button>
             </form>
           </div>
         </div>

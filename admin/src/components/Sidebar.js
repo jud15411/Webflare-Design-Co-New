@@ -1,12 +1,13 @@
 import React from 'react';
 import './Sidebar.css';
 
-// Accept 'user' as a prop
 function Sidebar({ user, currentPage, navigateTo }) {
   const handleLogout = () => {
     localStorage.removeItem('token');
     window.location.reload();
   };
+
+  const isAdmin = user && ['CEO', 'CTO'].includes(user.role);
 
   return (
     <aside className="sidebar">
@@ -15,44 +16,26 @@ function Sidebar({ user, currentPage, navigateTo }) {
       </div>
       <nav className="sidebar-nav">
         <ul>
-          <li className={currentPage === 'dashboard' ? 'active' : ''}>
-            <button onClick={() => navigateTo('dashboard')}>Dashboard</button>
-          </li>
-          <li className={currentPage === 'projects' ? 'active' : ''}>
-            <button onClick={() => navigateTo('projects')}>Projects</button>
-          </li>
-          {user && ['CEO'].includes(user.role) && (
-            <li className={currentPage === 'clients' ? 'active' : ''}>
-              <button onClick={() => navigateTo('clients')}>Clients</button>
-            </li>
+          {/* Links for All Users */}
+          <li className={currentPage === 'dashboard' ? 'active' : ''}><button onClick={() => navigateTo('dashboard')}>Dashboard</button></li>
+          <li className={currentPage === 'projects' ? 'active' : ''}><button onClick={() => navigateTo('projects')}>Projects</button></li>
+          <li className={currentPage === 'tasks' ? 'active' : ''}><button onClick={() => navigateTo('tasks')}>Tasks</button></li>
+          
+          {/* Admin Only Links */}
+          {isAdmin && (
+            <>
+              <li className={currentPage === 'reports' ? 'active' : ''}><button onClick={() => navigateTo('reports')}>Reports</button></li>
+              <li className={currentPage === 'clients' ? 'active' : ''}><button onClick={() => navigateTo('clients')}>Clients</button></li>
+              <li className={currentPage === 'invoices' ? 'active' : ''}><button onClick={() => navigateTo('invoices')}>Invoices</button></li>
+              <li className={currentPage === 'contracts' ? 'active' : ''}><button onClick={() => navigateTo('contracts')}>Contracts</button></li>
+              <li className={currentPage === 'addUser' ? 'active' : ''}><button onClick={() => navigateTo('addUser')}>Users</button></li>
+            </>
           )}
-          <li className={currentPage === 'tasks' ? 'active' : ''}>
-            <button onClick={() => navigateTo('tasks')}>Tasks</button>
-          </li>
-          {user && ['CEO', 'CTO'].includes(user.role) && (
-            <li className={currentPage === 'invoices' ? 'active' : ''}>
-              <button onClick={() => navigateTo('invoices')}>Invoices</button>
-            </li>
-          )}
-          {user && ['CEO', 'CTO'].includes(user.role) && (
-            <li className={currentPage === 'contracts' ? 'active' : ''}>
-              <button onClick={() => navigateTo('contracts')}>Contracts</button>
-            </li>
-          )}
-          {user && ['CEO'].includes(user.role) && (
-            <li className={currentPage === 'addUser' ? 'active' : ''}>
-              <button onClick={() => navigateTo('addUser')}>Users</button>
-            </li>
-          )}
-          <li className={currentPage === 'services' ? 'active' : ''}>
-            <button onClick={() => navigateTo('services')}>Services</button>
-          </li>
-          <li className={currentPage === 'settings' ? 'active' : ''}>
-            <button onClick={() => navigateTo('settings')}>Settings</button>
-          </li>
-          <li>
-            <button onClick={handleLogout} className="nav-link-logout">Log Out</button>
-          </li>
+
+          {/* Links for All Users */}
+          <li className={currentPage === 'services' ? 'active' : ''}><button onClick={() => navigateTo('services')}>Services</button></li>
+          <li className={currentPage === 'settings' ? 'active' : ''}><button onClick={() => navigateTo('settings')}>Settings</button></li>
+          <li><button onClick={handleLogout} className="nav-link-logout">Log Out</button></li>
         </ul>
       </nav>
     </aside>

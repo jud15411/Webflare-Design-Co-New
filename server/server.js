@@ -23,6 +23,7 @@ const Invoice = require('./models/Invoice');
 const Contract = require('./models/Contract');
 const Service = require('./models/Service');
 const Comment = require('./models/Comment');
+const TimeEntry = require('./models/TimeEntry');
 
 // --- Middleware ---
 app.use(cors());
@@ -416,6 +417,67 @@ app.get('/api/contracts', authMiddleware, adminOnlyMiddleware, async (req, res) 
 app.post('/api/contracts', authMiddleware, adminOnlyMiddleware, async (req, res) => res.status(201).json(await new Contract(req.body).save()));
 app.put('/api/contracts/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/contracts/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => res.json(await Contract.findByIdAndDelete(req.params.id)));
+
+// == TIME TRACKING ==
+// POST a new time entry for a task
+app.post('/api/tasks/:taskId/time', authMiddleware, async (req, res) => {
+    try {
+        const { hours, description } = req.body;
+        const task = await Task.findById(req.params.taskId);
+        if (!task) {
+            return res.status(404).json({ msg: 'Task not found' });
+        }
+
+        const newTimeEntry = new TimeEntry({
+            hours,
+            description,
+            user: req.userId,
+            task: req.params.taskId,
+            project: task.projectId
+        });
+        
+        await newTimeEntry.save();
+        res.status(201).json(newTimeEntry);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+// GET aggregated time report by project
+app.get('/api/reports/time-by-project', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        const timeReport = await TimeEntry.aggregate([
+            {
+                $group: {
+                    _id: '$project',
+                    totalHours: { $sum: '$hours' }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'projects',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'projectDetails'
+                }
+            },
+            {
+                $unwind: '$projectDetails'
+            },
+            {
+                $project: {
+                    _id: 0,
+                    projectId: '$projectDetails._id',
+                    projectTitle: '$projectDetails.title',
+                    totalHours: 1
+                }
+            }
+        ]);
+        res.json(timeReport);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
 
 // --- Start Server ---
 app.listen(PORT, () => {

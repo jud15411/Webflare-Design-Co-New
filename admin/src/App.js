@@ -12,15 +12,15 @@ import Tasks from './pages/Tasks';
 import Invoices from './pages/Invoices';
 import Contracts from './pages/Contracts';
 import Settings from './pages/Settings';
-import Users from './pages/Users'; // Changed from AddUser to Users
+import Users from './pages/Users';
 import Services from './pages/Services';
+import Reports from './pages/Reports'; // Correctly import the Reports component
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // On initial load, check for a token and decode it
     const token = localStorage.getItem('token');
     try {
       if (token) {
@@ -28,12 +28,10 @@ function App() {
         setUser(decodedUser);
       }
     } catch (error) {
-      // If token is invalid or expired, clear it
       localStorage.removeItem('token');
     }
   }, []);
 
-  // This function will be passed to the Login component
   const handleLogin = () => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -56,8 +54,9 @@ function App() {
       case 'invoices': return <Invoices />;
       case 'contracts': return <Contracts />;
       case 'settings': return <Settings />;
-      case 'addUser': return <Users />; // Changed this case to render the Users component
+      case 'addUser': return <Users />;
       case 'services': return <Services />;
+      case 'reports': return <Reports />; // Correctly route to the Reports component
       default: return <Dashboard />;
     }
   };
