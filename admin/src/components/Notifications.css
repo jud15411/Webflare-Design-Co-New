@@ -1,6 +1,5 @@
 .notification-bell {
   position: relative;
-  margin-right: 20px;
 }
 
 .bell-button {
@@ -29,8 +28,8 @@
 
 .notification-panel {
   position: absolute;
-  top: 50px;
-  right: 0;
+  top: 55px; /* Adjust spacing from the top */
+  right: 5px;  /* Adjust spacing from the right edge */
   width: 350px;
   background-color: #fff;
   border-radius: 8px;
