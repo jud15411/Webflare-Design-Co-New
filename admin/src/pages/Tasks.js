@@ -9,8 +9,13 @@ import './Tasks.css';
 const TaskCard = ({ task, onEdit }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task._id });
   const style = { transform: CSS.Transform.toString(transform), transition };
+
   return (
-    <div className="task-card" onClick={() => onEdit(task)} ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    // The main div is now only for dragging
+    <div className="task-card" ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {/* This new button handles the editing click */}
+      <button className="edit-task-button" onClick={() => onEdit(task)}>✏️</button>
+      
       <h4>{task.title}</h4>
       <p className="task-project-name">{task.projectId?.title}</p>
       <p className="task-assignee">{task.assignedTo?.name || 'Unassigned'}</p>

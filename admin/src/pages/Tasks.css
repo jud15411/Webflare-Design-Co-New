@@ -29,6 +29,7 @@
 }
 
 .task-card {
+  position: relative;
   background-color: #fff;
   border-radius: 5px;
   padding: 15px;
@@ -63,4 +64,23 @@
   padding: 2px 6px;
   border-radius: 4px;
   display: inline-block;
+}
+
+.edit-task-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #6c757d;
+  padding: 5px;
+  border-radius: 50%;
+  line-height: 1;
+}
+
+.edit-task-button:hover {
+  background-color: #e9ecef;
+  color: #212529;
 }
