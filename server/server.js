@@ -582,6 +582,22 @@ app.put('/api/projects/:id/toggle-feature', authMiddleware, async (req, res) => 
     } catch (err) { res.status(500).send('Server Error'); }
 });
 
+app.get('/api/projects/:projectId/hours', authMiddleware, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const totalHoursResult = await TimeEntry.aggregate([
+      { $match: { projectId: new mongoose.Types.ObjectId(projectId) } },
+      { $group: { _id: null, totalHours: { $sum: '$hours' } } }
+    ]);
+
+    const totalHours = totalHoursResult.length > 0 ? totalHoursResult[0].totalHours : 0;
+    res.json({ totalHours });
+  } catch (err) {
+    console.error('Error fetching project hours:', err);
+    res.status(500).json({ msg: 'Server Error' });
+  }
+});
+
 
 // == MILESTONES ==
 app.post('/api/milestones', authMiddleware, adminOnlyMiddleware, async (req, res) => {
