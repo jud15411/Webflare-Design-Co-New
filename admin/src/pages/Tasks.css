@@ -33,9 +33,10 @@
   background-color: #fff;
   border-radius: 5px;
   padding: 15px;
+  padding-left: 30px; /* Make space for the drag handle */
   margin-bottom: 10px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  cursor: grab;
+  /* cursor: grab; is no longer needed here */
 }
 
 .task-card h4 {
@@ -83,4 +84,21 @@
 .edit-task-button:hover {
   background-color: #e9ecef;
   color: #212529;
+}
+
+.drag-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 20px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: grab;
+  color: #bdc3c7;
+}
+
+.drag-icon {
+  font-weight: bold;
 }

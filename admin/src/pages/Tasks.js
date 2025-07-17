@@ -11,14 +11,21 @@ const TaskCard = ({ task, onEdit }) => {
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
-    // The main div is now only for dragging
-    <div className="task-card" ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {/* This new button handles the editing click */}
-      <button className="edit-task-button" onClick={() => onEdit(task)}>✏️</button>
+    // This main div is now just a container
+    <div className="task-card" ref={setNodeRef} style={style}>
+      {/* This new div is the drag handle */}
+      <div className="drag-handle" {...attributes} {...listeners}>
+        <span className="drag-icon">::</span>
+      </div>
+
+      <div className="card-content">
+        <h4>{task.title}</h4>
+        <p className="task-project-name">{task.projectId?.title}</p>
+        <p className="task-assignee">{task.assignedTo?.name || 'Unassigned'}</p>
+      </div>
       
-      <h4>{task.title}</h4>
-      <p className="task-project-name">{task.projectId?.title}</p>
-      <p className="task-assignee">{task.assignedTo?.name || 'Unassigned'}</p>
+      {/* The button is now separate from the drag handle */}
+      <button className="edit-task-button" onClick={() => onEdit(task)}>✏️</button>
     </div>
   );
 };
