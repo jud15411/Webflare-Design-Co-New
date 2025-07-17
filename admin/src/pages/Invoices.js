@@ -1,5 +1,3 @@
-// jud15411/webflare-design-co-new/Webflare-Design-Co-New-2100d7f30c3a6542772817c09db5f1d9a53ddf69/admin/src/pages/Invoices.js
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import InvoiceTemplate from '../components/InvoiceTemplate';
@@ -19,8 +17,15 @@ function Invoices() {
 
   // This is the useReactToPrint hook, correctly set up to use the ref.
   const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
-    onAfterPrint: () => setInvoiceToPrint(null), // Clear the invoiceToPrint state after printing
+    content: () => {
+      // For debugging: see what the ref holds right before printing.
+      console.log('handlePrint content function called. Current ref:', componentRef.current);
+      return componentRef.current;
+    },
+    onAfterPrint: () => {
+      console.log('After print, clearing invoiceToPrint.');
+      setInvoiceToPrint(null); // Clear the invoiceToPrint state after printing
+    },
   });
 
   // Fetch data for invoices and projects
@@ -39,10 +44,19 @@ function Invoices() {
     fetchData();
   }, [fetchData]);
 
-  // NEW: useEffect to trigger print when invoiceToPrint is set
+  // UPDATED: useEffect to trigger print when invoiceToPrint is set, ensuring DOM readiness
   useEffect(() => {
     if (invoiceToPrint) { // Only trigger if invoiceToPrint has data
-      handlePrint();
+      console.log('useEffect triggered: invoiceToPrint is now', invoiceToPrint);
+      // Use requestAnimationFrame to ensure the DOM has updated before accessing the ref
+      requestAnimationFrame(() => {
+        if (componentRef.current) {
+          console.log('Ref is valid, calling handlePrint.');
+          handlePrint();
+        } else {
+          console.error('Ref is still null after requestAnimationFrame, cannot print. This indicates a deeper rendering issue.');
+        }
+      });
     }
   }, [invoiceToPrint, handlePrint]); // Dependency array: re-run when invoiceToPrint or handlePrint changes
 
@@ -100,6 +114,7 @@ function Invoices() {
   
   // This function now just sets the invoice to print, the useEffect will handle the actual print trigger
   const triggerPrint = (invoice) => {
+    console.log('Triggering print for invoice:', invoice);
     setInvoiceToPrint(invoice); 
   };
 
