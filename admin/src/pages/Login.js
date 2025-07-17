@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './Login.css';
 
-function Login({ onLogin }) { // Accept the onLogin prop
+function Login({ onLoginSuccess }) { // Accept the onLogin prop
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,7 +21,7 @@ function Login({ onLogin }) { // Accept the onLogin prop
       
       localStorage.setItem('token', data.token);
       
-      props.onLoginSuccess(); // Call the onLogin function passed from App.js
+      onLoginSuccess(); // Call the onLoginSuccess function passed from App.js
     } catch (err) {
       setError(err.message);
     }
