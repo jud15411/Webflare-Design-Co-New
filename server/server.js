@@ -1,5 +1,5 @@
 require('dotenv').config();
-const express = require('express'); // Ensure this line is present and at the top!
+const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -15,7 +15,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const MONGO_URI = process.env.MONGO_URI;
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
-// Define your production URL here, e.g., 'https://www.yourdomain.com'
+// Define your production URL for the frontend client portal here
 const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:${process.env.PORT || 8080}`;
 
 
@@ -74,8 +74,7 @@ const authMiddleware = (req, res, next) => {
         const decoded = jwt.verify(token, JWT_SECRET);
         req.userId = decoded.id;
         req.userRole = decoded.role;
-        // Optionally pass clientId from token if available (for client users)
-        req.userClientId = decoded.clientId || null;
+        req.userClientId = decoded.clientId || null; // Ensure clientId from token is attached
         next();
     } catch (err) {
         res.status(401).json({ msg: 'Token is not valid' });
@@ -117,12 +116,12 @@ const ownerOrAdminMiddleware = async (req, res, next) => {
         // If client, check ownership
         if (userRole === 'CLIENT') {
             const userId = req.userId;
-            const user = await User.findById(userId); // Fetch user to get clientId
+            const user = await User.findById(userId).populate('clientId');
             if (!user || !user.clientId) {
                 return res.status(403).json({ msg: 'Access denied. Client not properly associated.' });
             }
 
-            // For project-specific routes (e.g., /api/client/projects/:projectId)
+            // For project-specific routes (e.g., /api/client/projects/:projectId, /api/projects/:projectId/files)
             if (req.params.projectId) {
                 const project = await Project.findById(req.params.projectId);
                 if (!project || project.clientId.toString() !== user.clientId._id.toString()) {
@@ -146,7 +145,7 @@ const ownerOrAdminMiddleware = async (req, res, next) => {
         return res.status(403).json({ msg: 'Access denied. Insufficient privileges.' });
     } catch (err) {
         console.error('Owner or Admin Middleware Error:', err);
-        res.status(500).send('Server error during authorization.');
+        res.status(500).json({ msg: 'Server error during authorization.' }); // Ensure JSON response
     }
 };
 
@@ -160,7 +159,6 @@ const sendVerificationEmail = async (user) => {
         }
     });
 
-    // Ensure CLIENT_URL is defined and correctly points to your frontend domain
     const verificationLink = `${CLIENT_URL}/login?verificationStatus=success&email=${encodeURIComponent(user.email)}`;
 
     const mailOptions = {
@@ -404,9 +402,47 @@ app.delete('/api/users/:id', authMiddleware, ceoOnlyMiddleware, async (req, res)
 
 
 // == PROJECTS ==
+
+// Get a single project by ID for admin panel
+app.get('/api/projects/:id', authMiddleware, async (req, res) => {
+    try {
+        const projectId = req.params.id;
+
+        // Validate if projectId is a valid MongoDB ObjectId
+        if (!mongoose.Types.ObjectId.isValid(projectId)) {
+            return res.status(400).json({ msg: 'Invalid Project ID format.' });
+        }
+
+        const project = await Project.findById(projectId)
+            .populate('clientId', 'name') // Populate client name
+            .populate({ // Populate milestones for the project detail view
+                path: 'milestones',
+                model: 'Milestone',
+                populate: { // Optionally populate tasks and assignees within milestones
+                    path: 'tasks',
+                    model: 'Task',
+                    populate: {
+                        path: 'assignedTo',
+                        model: 'User',
+                        select: 'name'
+                    }
+                }
+            });
+
+        if (!project) {
+            return res.status(404).json({ msg: 'Project not found.' });
+        }
+        res.json(project);
+    } catch (err) {
+        console.error('Error fetching single project:', err);
+        res.status(500).json({ msg: 'Server Error fetching project details.' }); // Ensure JSON response
+    }
+});
+
+
+// Get ALL projects for the admin panel list view
 app.get('/api/projects', authMiddleware, async (req, res) => {
     try {
-        // Updated project query to populate client details and milestones
         const projects = await Project.aggregate([
             {
                 $lookup: {
@@ -419,25 +455,51 @@ app.get('/api/projects', authMiddleware, async (req, res) => {
             {
                 $lookup: {
                     from: 'clients',
-                    localField: 'clientId',
+                    localField: 'clientId', // Use the original clientId from Project
                     foreignField: '_id',
                     as: 'clientDetails'
                 }
             },
             { $unwind: { path: '$clientDetails', preserveNullAndEmptyArrays: true } },
             {
-                $lookup: { // NEW: Lookup Milestones for each project
+                $lookup: { // Lookup Milestones for each project
                     from: 'milestones',
                     localField: '_id',
                     foreignField: 'projectId',
                     as: 'milestones'
                 }
             },
-            { $addFields: { commentCount: { $size: '$comments' }, clientId: '$clientDetails' } },
-            { $project: { comments: 0, clientDetails: 0 } }
+            {
+                $addFields: {
+                    commentCount: { $size: '$comments' },
+                    client: '$clientDetails' // This maps the populated client object to a new field 'client'
+                }
+            },
+            { // FIX: Explicitly include _id and other necessary fields in the final projection
+                $project: {
+                    _id: 1, // Explicitly include the _id
+                    title: 1,
+                    description: 1,
+                    status: 1,
+                    imageUrl: 1,
+                    isFeatured: 1,
+                    createdAt: 1,
+                    updatedAt: 1,
+                    commentCount: 1,
+                    clientId: '$clientId', // Keep the original clientId (the ID from Project document)
+                    client: { // Project specific fields to return the populated client details
+                        _id: '$clientDetails._id', // Access populated client's _id
+                        name: '$clientDetails.name' // Access populated client's name
+                    },
+                    milestones: 1 // Include populated milestones for the project list if needed, or remove to simplify
+                }
+            }
         ]);
         res.json(projects);
-    } catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) {
+        console.error('Error fetching all projects (aggregation):', err);
+        res.status(500).json({ msg: 'Server Error fetching all projects.' });
+    }
 });
 
 app.post('/api/projects', authMiddleware, (req, res) => {
@@ -618,7 +680,6 @@ app.put('/api/client/milestones/:milestoneId/suggest', authMiddleware, clientOnl
         await milestone.save();
 
         // Notify relevant internal users (CEO, project manager, assigned dev etc.)
-        // This is a basic example, you might want more sophisticated notification logic
         const projectCreator = await User.findById(milestone.projectId.creator); // Assuming project has a creator field
         const message = `${user.name} (Client) added a suggestion to milestone "${milestone.name}" on project "${milestone.projectId.title}".`;
         
@@ -648,36 +709,6 @@ app.get('/api/projects/:projectId/files', authMiddleware, ownerOrAdminMiddleware
         res.status(500).send('Server Error');
     }
 });
-app.get('/api/projects/:id', authMiddleware, async (req, res) => {
-    try {
-        const project = await Project.findById(req.params.id)
-            .populate('clientId', 'name') // Populate client name
-            .populate({ // Populate milestones for the project detail view
-                path: 'milestones',
-                model: 'Milestone',
-                populate: { // Optionally populate tasks and assignees within milestones
-                    path: 'tasks',
-                    model: 'Task',
-                    populate: {
-                        path: 'assignedTo',
-                        model: 'User',
-                        select: 'name'
-                    }
-                }
-            });
-
-        if (!project) {
-            // Send JSON error for Not Found
-            return res.status(404).json({ msg: 'Project not found.' });
-        }
-        res.json(project);
-    } catch (err) {
-        console.error('Error fetching single project:', err);
-        // FIX: Send JSON error for server errors
-        res.status(500).json({ msg: 'Server Error fetching project details.' });
-    }
-});
-
 
 app.post('/api/projects/:projectId/files', authMiddleware, adminOnlyMiddleware, (req, res) => { // Admin only for adding files for now
     uploadProjectFile(req, res, async (err) => {
