@@ -429,9 +429,10 @@ app.get('/api/projects', authMiddleware, async (req, res) => {
                 $lookup: {
                     from: 'comments', // The name of the comments collection
                     localField: '_id',
-                    foreignField: 'projectId', // Ensure this field name is correct in your Comment model
+                    // FIX: The field in the Comment model is 'projectId'
+                    foreignField: 'projectId',
                     as: 'comments'
-                }
+    }
             },
             {
                 // Step 4: Create the final project structure
