@@ -9,7 +9,6 @@ async function fetchData(url, token) {
     headers: { 'x-auth-token': token }
   });
   if (!response.ok) {
-    // Try to parse the error message from the server, or use a default
     const errorData = await response.json().catch(() => ({ msg: 'An unknown error occurred.' }));
     throw new Error(`Failed to fetch from ${url}: ${errorData.msg}`);
   }
@@ -32,13 +31,12 @@ function ProjectDetail() {
   const [totalHours, setTotalHours] = useState(0);
 
   const token = localStorage.getItem('token');
-  const API_URL = process.env.REACT_APP_API_URL; // Define API URL for reuse
+  const API_URL = process.env.REACT_APP_API_URL;
 
   const loadProjectData = useCallback(async () => {
     setIsLoading(true);
     setError('');
     try {
-      // FIX: Added API_URL to all fetch calls
       const projectData = await fetchData(`${API_URL}/api/projects/${projectId}`, token);
       setProject(projectData);
 
@@ -48,6 +46,7 @@ function ProjectDetail() {
       const commentsData = await fetchData(`${API_URL}/api/projects/${projectId}/comments`, token);
       setComments(commentsData);
       
+      // FIX: Extract the numeric value from the returned object
       const hoursData = await fetchData(`${API_URL}/api/projects/${projectId}/hours`, token);
       setTotalHours(hoursData.totalHours || 0);
 
@@ -57,7 +56,7 @@ function ProjectDetail() {
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, token, API_URL]); // Added API_URL to dependency array
+  }, [projectId, token, API_URL]);
 
   useEffect(() => {
     loadProjectData();
@@ -87,7 +86,6 @@ function ProjectDetail() {
     formData.append('projectFile', selectedFile);
 
     try {
-      // FIX: Added API_URL to the fetch call
       const response = await fetch(`${API_URL}/api/projects/${projectId}/files`, {
         method: 'POST',
         headers: { 'x-auth-token': token },
@@ -113,7 +111,6 @@ function ProjectDetail() {
       return;
     }
     try {
-      // FIX: Added API_URL to the fetch call
       const response = await fetch(`${API_URL}/api/projects/${projectId}/comments`, {
         method: 'POST',
         headers: {
@@ -125,6 +122,7 @@ function ProjectDetail() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.msg || 'Failed to post comment.');
       
+      // FIX: Add the new comment object to the beginning of the existing comments array
       setComments(prevComments => [data, ...prevComments]);
       setNewComment('');
     } catch (err) {
@@ -192,7 +190,7 @@ function ProjectDetail() {
             <div key={comment._id} className="comment-item">
               <p className="comment-text">{comment.text}</p>
               <p className="comment-meta">
-                by <strong>{comment.author.name}</strong> on {new Date(comment.createdAt).toLocaleString()}
+                by <strong>{comment.author ? comment.author.name : 'Unknown User'}</strong> on {new Date(comment.createdAt).toLocaleString()}
               </p>
             </div>
           )) : <p>No comments yet.</p>}
