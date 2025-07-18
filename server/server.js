@@ -1210,7 +1210,7 @@ app.put('/api/notifications/mark-read', authMiddleware, async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 
-app.post('/api/timeentries', auth, async (req, res) => {
+app.post('/api/timeentries', authMiddleware, async (req, res) => {
   const { hours, taskId, projectId } = req.body;
 
   if (!hours || !taskId || !projectId) {
