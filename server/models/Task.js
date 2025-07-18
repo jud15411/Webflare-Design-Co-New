@@ -1,3 +1,5 @@
+// server/models/Task.js
+
 const mongoose = require('mongoose');
 
 const TaskSchema = new mongoose.Schema({
@@ -12,8 +14,8 @@ const TaskSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Backlog', 'To Do', 'In Progress', 'Done'], // Added "Backlog"
-    default: 'Backlog' // Set as default
+    enum: ['Backlog', 'To Do', 'In Progress', 'Done'], // "Backlog" is now a valid status
+    default: 'Backlog' // New tasks will default to the Backlog
   },
   priority: {
     type: String,

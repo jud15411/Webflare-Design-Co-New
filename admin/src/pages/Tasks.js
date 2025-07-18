@@ -1,7 +1,38 @@
+// admin/src/pages/Tasks.js
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import './Shared.css';
 import './Tasks.css';
+
+// Task Card Component
+const TaskCard = ({ task, onEdit }) => (
+  <div className="task-card">
+    <h4 className="task-card-title">{task.title}</h4>
+    <div className="task-card-meta">
+      <span className="project-title">
+        {task.projectId ? task.projectId.title : 'No Project'}
+      </span>
+      <span className="assignee-avatar" title={task.assignedTo ? task.assignedTo.name : 'Unassigned'}>
+        {task.assignedTo ? task.assignedTo.name.charAt(0).toUpperCase() : '?'}
+      </span>
+    </div>
+    <button className="edit-task-button" onClick={() => onEdit(task)}>✏️</button>
+  </div>
+);
+
+// Task Column Component
+const TaskColumn = ({ title, tasks, onEdit }) => (
+  <div className="task-column">
+    <div className={`column-header ${title.replace(/\s+/g, '-').toLowerCase()}`}>
+      <h2 className="column-title">{title} ({tasks.length})</h2>
+    </div>
+    <div className="task-list">
+      {tasks.map(task => (
+        <TaskCard key={task._id} task={task} onEdit={onEdit} />
+      ))}
+    </div>
+  </div>
+);
 
 function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -10,15 +41,9 @@ function Tasks() {
   const token = localStorage.getItem('token');
   const API_URL = process.env.REACT_APP_API_URL;
 
-  // Added 'Backlog' as the first column
-  const initialColumns = {
-    'Backlog': { id: 'Backlog', title: 'Backlog', taskIds: [] },
-    'To Do': { id: 'To Do', title: 'To Do', taskIds: [] },
-    'In Progress': { id: 'In Progress', title: 'In Progress', taskIds: [] },
-    'Done': { id: 'Done', title: 'Done', taskIds: [] },
-  };
-
-  const [columns, setColumns] = useState(initialColumns);
+  // State for the modal
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
 
   const fetchTasks = useCallback(async () => {
     setIsLoading(true);
@@ -29,77 +54,64 @@ function Tasks() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.msg || 'Failed to fetch tasks');
-      
       setTasks(data);
-      
-      const newColumns = JSON.parse(JSON.stringify(initialColumns));
-      data.forEach(task => {
-        if (newColumns[task.status]) {
-          newColumns[task.status].taskIds.push(task._id);
-        }
-      });
-      setColumns(newColumns);
-
     } catch (err) {
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [token, API_URL]); // initialColumns is stable
+  }, [token, API_URL]);
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
 
-  const onDragEnd = async (result) => {
-    const { destination, source, draggableId } = result;
+  const openEditModal = (task) => {
+    setEditingTask(task);
+    setShowEditModal(true);
+  };
 
-    if (!destination) return;
-    if (destination.droppableId === source.droppableId && destination.index === source.index) {
-      return;
-    }
+  const closeEditModal = () => {
+    setEditingTask(null);
+    setShowEditModal(false);
+  };
 
-    const start = columns[source.droppableId];
-    const finish = columns[destination.droppableId];
-    const newStatus = finish.id;
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditingTask(prev => ({ ...prev, [name]: value }));
+  };
 
-    // Optimistic UI Update
-    const startTaskIds = Array.from(start.taskIds);
-    startTaskIds.splice(source.index, 1);
-    const newStart = { ...start, taskIds: startTaskIds };
+  const handleUpdateTask = async (e) => {
+    e.preventDefault();
+    if (!editingTask) return;
 
-    const finishTaskIds = Array.from(finish.taskIds);
-    finishTaskIds.splice(destination.index, 0, draggableId);
-    const newFinish = { ...finish, taskIds: finishTaskIds };
-
-    setColumns(prev => ({
-      ...prev,
-      [newStart.id]: newStart,
-      [newFinish.id]: newFinish,
-    }));
-
-    // API Call to update task status
     try {
-      const response = await fetch(`${API_URL}/api/tasks/${draggableId}/status`, {
+      const response = await fetch(`${API_URL}/api/tasks/${editingTask._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'x-auth-token': token,
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({
+          title: editingTask.title,
+          description: editingTask.description,
+          status: editingTask.status,
+          // Add other fields you want to edit
+        }),
       });
       if (!response.ok) {
-        throw new Error('Failed to update task status.');
+        throw new Error('Failed to update task.');
       }
+      closeEditModal();
+      fetchTasks(); // Refetch tasks to update the board
     } catch (err) {
-      // Revert UI on error
-      setError('Failed to update status. Please try again.');
-      setColumns(columns); // Revert to original state
+      setError(err.message || 'Error updating task.');
     }
   };
 
-  const getAssigneeInitial = (name) => {
-    return name ? name.charAt(0).toUpperCase() : '?';
+  const columns = ['Backlog', 'To Do', 'In Progress', 'Done'];
+  const tasksByColumn = (columnName) => {
+    return tasks.filter(task => task.status === columnName);
   };
 
   if (isLoading) return <div className="loading-message">Loading tasks...</div>;
@@ -110,54 +122,42 @@ function Tasks() {
       <div className="page-header">
         <h1 className="page-title">Task Board</h1>
       </div>
-      <DragDropContext onDragEnd={onDragEnd}>
-        <div className="tasks-board">
-          {Object.values(columns).map(column => (
-            <div key={column.id} className="task-column">
-              <div className={`column-header ${column.id.replace(/\s+/g, '-').toLowerCase()}`}>
-                <h2 className="column-title">{column.title}</h2>
-              </div>
-              <Droppable droppableId={column.id}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`task-list ${snapshot.isDraggingOver ? 'is-dragging-over' : ''}`}
-                  >
-                    {column.taskIds.map((taskId, index) => {
-                      const task = tasks.find(t => t._id === taskId);
-                      if (!task) return null;
-                      return (
-                        <Draggable key={task._id} draggableId={task._id} index={index}>
-                          {(provided) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className="task-card"
-                            >
-                              <h4 className="task-card-title">{task.title}</h4>
-                              <div className="task-card-meta">
-                                <span className="project-title">
-                                  {task.projectId ? task.projectId.title : 'No Project'}
-                                </span>
-                                <span className="assignee-avatar" title={task.assignedTo ? task.assignedTo.name : 'Unassigned'}>
-                                  {getAssigneeInitial(task.assignedTo ? task.assignedTo.name : null)}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      );
-                    })}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
+
+      <div className="tasks-board">
+        {columns.map(columnName => (
+          <TaskColumn
+            key={columnName}
+            title={columnName}
+            tasks={tasksByColumn(columnName)}
+            onEdit={openEditModal}
+          />
+        ))}
+      </div>
+
+      {showEditModal && editingTask && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2 className="modal-title">Edit Task</h2>
+              <button className="close-button" onClick={closeEditModal}>&times;</button>
             </div>
-          ))}
+            <form onSubmit={handleUpdateTask}>
+              <div className="form-group">
+                <label>Title</label>
+                <input type="text" name="title" value={editingTask.title} onChange={handleInputChange} required />
+              </div>
+              <div className="form-group">
+                <label>Status</label>
+                <select name="status" value={editingTask.status} onChange={handleInputChange}>
+                  {columns.map(status => <option key={status} value={status}>{status}</option>)}
+                </select>
+              </div>
+              {/* You can add more fields to edit here, like description */}
+              <button type="submit" className="add-button">Update Task</button>
+            </form>
+          </div>
         </div>
-      </DragDropContext>
+      )}
     </div>
   );
 }
