@@ -587,6 +587,44 @@ app.post('/api/projects/:projectId/milestones', authMiddleware, async (req, res)
 });
 
 // == MILESTONES ==
+app.put('/api/milestones/:id/status', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        const { status } = req.body;
+        const { id } = req.params;
+
+        // Define the allowed statuses from your Milestone Schema
+        const allowedStatuses = ['Not Started', 'In Progress', 'Completed', 'On Hold', 'Canceled'];
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({ msg: 'Invalid status value.' });
+        }
+
+        const update = { status };
+
+        // If the milestone is being marked as 'Completed', set the completion date.
+        // Otherwise, ensure the completion date is removed if the status changes from 'Completed'.
+        if (status === 'Completed') {
+            update.completionDate = new Date();
+        } else {
+            update.$unset = { completionDate: 1 };
+        }
+
+        const updatedMilestone = await Milestone.findByIdAndUpdate(
+            id,
+            update,
+            { new: true }
+        ).populate('lastSuggestedBy', 'name'); // Re-populate suggestion author after update
+
+        if (!updatedMilestone) {
+            return res.status(404).json({ msg: 'Milestone not found.' });
+        }
+
+        res.json(updatedMilestone);
+    } catch (err) {
+        console.error('Error updating milestone status:', err);
+        res.status(500).json({ msg: 'Server error updating milestone status.' });
+    }
+});
+
 app.post('/api/milestones', authMiddleware, adminOnlyMiddleware, async (req, res) => {
     try {
         const { name, description, projectId, dueDate, status } = req.body;

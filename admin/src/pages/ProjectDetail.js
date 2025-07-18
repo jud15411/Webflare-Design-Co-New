@@ -1,5 +1,3 @@
-// In admin/src/pages/ProjectDetail.js
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import './Shared.css';
@@ -89,20 +87,16 @@ function ProjectDetail() {
       displayApiMessage('Please select a file to upload.', 'error');
       return;
     }
-
     const formData = new FormData();
     formData.append('projectFile', selectedFile);
-
     try {
       const response = await fetch(`${API_URL}/api/projects/${projectId}/files`, {
         method: 'POST',
         headers: { 'x-auth-token': token },
         body: formData,
       });
-
       const data = await response.json();
       if (!response.ok) throw new Error(data.msg || 'File upload failed.');
-      
       displayApiMessage('File uploaded successfully!', 'success');
       setFiles(prevFiles => [data, ...prevFiles]);
       setSelectedFile(null);
@@ -129,7 +123,6 @@ function ProjectDetail() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.msg || 'Failed to post comment.');
-      
       setComments(prevComments => [data, ...prevComments]);
       setNewComment('');
     } catch (err) {
@@ -155,11 +148,32 @@ function ProjectDetail() {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.msg || 'Failed to add milestone.');
-
         setMilestones(prev => [...prev, data].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)));
         setShowAddMilestoneModal(false);
         setNewMilestone({ name: '', description: '', dueDate: '' });
         displayApiMessage('Milestone added successfully!', 'success');
+    } catch (err) {
+        displayApiMessage(err.message, 'error');
+    }
+  };
+
+  // New handler for updating milestone status
+  const handleStatusChange = async (milestoneId, newStatus) => {
+    try {
+        const response = await fetch(`${API_URL}/api/milestones/${milestoneId}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-auth-token': token,
+            },
+            body: JSON.stringify({ status: newStatus }),
+        });
+        const updatedMilestone = await response.json();
+        if (!response.ok) throw new Error(updatedMilestone.msg || 'Failed to update status.');
+
+        // Update the milestone in the local state
+        setMilestones(prev => prev.map(m => m._id === milestoneId ? updatedMilestone : m));
+        displayApiMessage('Status updated!', 'success');
     } catch (err) {
         displayApiMessage(err.message, 'error');
     }
@@ -194,13 +208,22 @@ function ProjectDetail() {
             <div key={milestone._id} className="milestone-item">
               <div className="milestone-header">
                 <span className="milestone-name">{milestone.name}</span>
-                <span className={`milestone-status status-${milestone.status.replace(/\s+/g, '-').toLowerCase()}`}>
-                  {milestone.status}
-                </span>
+                
+                {/* FIX: Replaced status text with a dropdown */}
+                <select
+                  className="milestone-status-select"
+                  value={milestone.status}
+                  onChange={(e) => handleStatusChange(milestone._id, e.target.value)}
+                >
+                  <option>Not Started</option>
+                  <option>In Progress</option>
+                  <option>On Hold</option>
+                  <option>Completed</option>
+                  <option>Canceled</option>
+                </select>
+
               </div>
               {milestone.description && <p className="milestone-description">{milestone.description}</p>}
-
-              {/* FIX: Display client suggestion if it exists */}
               {milestone.clientSuggestions && (
                 <div className="client-suggestion-box">
                   <p className="suggestion-title">
@@ -211,7 +234,6 @@ function ProjectDetail() {
                   <p className="suggestion-text">{milestone.clientSuggestions}</p>
                 </div>
               )}
-
               <p className="milestone-due-date">
                 Due: {new Date(milestone.dueDate).toLocaleDateString()}
               </p>
