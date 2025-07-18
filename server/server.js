@@ -537,7 +537,8 @@ app.get('/api/projects/:projectId/hours', authMiddleware, async (req, res) => {
   try {
     const { projectId } = req.params;
     const totalHoursResult = await TimeEntry.aggregate([
-      { $match: { projectId: new mongoose.Types.ObjectId(projectId) } },
+      // FIX: The field name in the TimeEntry model is 'project', not 'projectId'.
+      { $match: { project: new mongoose.Types.ObjectId(projectId) } },
       { $group: { _id: null, totalHours: { $sum: '$hours' } } }
     ]);
 
