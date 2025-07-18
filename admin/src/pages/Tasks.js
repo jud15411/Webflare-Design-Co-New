@@ -12,9 +12,17 @@ const TaskCard = ({ task, onEdit }) => (
       <span className="project-title">
         {task.projectId ? task.projectId.title : 'No Project'}
       </span>
-      <span className="assignee-avatar" title={task.assignedTo ? task.assignedTo.name : 'Unassigned'}>
-        {task.assignedTo ? task.assignedTo.name.charAt(0).toUpperCase() : '?'}
-      </span>
+      <div className="assignee-avatars">
+        {task.assignedTo && task.assignedTo.length > 0 ? (
+          task.assignedTo.map(user => (
+            <span key={user._id} className="assignee-avatar" title={user.name}>
+              {user.name.charAt(0).toUpperCase()}
+            </span>
+          ))
+        ) : (
+          <span className="assignee-avatar" title="Unassigned">?</span>
+        )}
+      </div>
     </div>
     <button className="edit-task-button" onClick={() => onEdit(task)}>✏️</button>
   </div>
@@ -36,14 +44,13 @@ const TaskColumn = ({ title, tasks, onEdit }) => (
 
 function Tasks() {
   const [tasks, setTasks] = useState([]);
-  const [projects, setProjects] = useState([]); // For dropdown in add modal
-  const [users, setUsers] = useState([]); // For dropdown in add modal
+  const [projects, setProjects] = useState([]);
+  const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const token = localStorage.getItem('token');
   const API_URL = process.env.REACT_APP_API_URL;
 
-  // State for the modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -51,15 +58,15 @@ function Tasks() {
     title: '',
     description: '',
     projectId: '',
-    assignedTo: '',
+    assignedTo: [],
     dueDate: '',
   });
+  const [timeLog, setTimeLog] = useState('');
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError('');
     try {
-      // Fetch tasks, projects, and users in parallel
       const [tasksRes, projectsRes, usersRes] = await Promise.all([
         fetch(`${API_URL}/api/tasks`, { headers: { 'x-auth-token': token } }),
         fetch(`${API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
@@ -90,7 +97,8 @@ function Tasks() {
   }, [fetchData]);
 
   const openEditModal = (task) => {
-    setEditingTask(task);
+    const assignedToIds = task.assignedTo ? task.assignedTo.map(user => user._id) : [];
+    setEditingTask({ ...task, assignedTo: assignedToIds });
     setShowEditModal(true);
   };
 
@@ -98,22 +106,42 @@ function Tasks() {
     setShowEditModal(false);
     setEditingTask(null);
     setShowAddModal(false);
-    setNewTask({ title: '', description: '', projectId: '', assignedTo: '', dueDate: '' });
+    setNewTask({ title: '', description: '', projectId: '', assignedTo: [], dueDate: '' });
+    setTimeLog('');
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditingTask(prev => ({ ...prev, [name]: value }));
+    const { name, value, options } = e.target;
+    if (name === 'assignedTo' && options) {
+      const selectedAssignees = Array.from(options)
+        .filter(option => option.selected)
+        .map(option => option.value);
+      setEditingTask(prev => ({ ...prev, [name]: selectedAssignees }));
+    } else {
+      setEditingTask(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleNewTaskInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewTask(prev => ({ ...prev, [name]: value }));
+    const { name, value, options } = e.target;
+    if (name === 'assignedTo' && options) {
+        const selectedAssignees = Array.from(options)
+            .filter(option => option.selected)
+            .map(option => option.value);
+        setNewTask(prev => ({ ...prev, [name]: selectedAssignees }));
+    } else {
+        setNewTask(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleUpdateTask = async (e) => {
     e.preventDefault();
     if (!editingTask) return;
+
+    const taskUpdateData = { ...editingTask };
+    if (timeLog) {
+      taskUpdateData.timeLog = timeLog;
+    }
 
     try {
       const response = await fetch(`${API_URL}/api/tasks/${editingTask._id}`, {
@@ -122,12 +150,12 @@ function Tasks() {
           'Content-Type': 'application/json',
           'x-auth-token': token,
         },
-        body: JSON.stringify(editingTask),
+        body: JSON.stringify(taskUpdateData),
       });
       if (!response.ok) throw new Error('Failed to update task.');
       
       closeModals();
-      fetchData(); // Refetch all data
+      fetchData();
     } catch (err) {
       setError(err.message || 'Error updating task.');
     }
@@ -147,7 +175,7 @@ function Tasks() {
       if (!response.ok) throw new Error('Failed to add task.');
       
       closeModals();
-      fetchData(); // Refetch all data
+      fetchData();
     } catch (err) {
       setError(err.message || 'Error adding task.');
     }
@@ -205,8 +233,7 @@ function Tasks() {
               </div>
                <div className="form-group">
                 <label>Assign To</label>
-                <select name="assignedTo" value={newTask.assignedTo} onChange={handleNewTaskInputChange}>
-                  <option value="">Unassigned</option>
+                <select name="assignedTo" value={newTask.assignedTo} onChange={handleNewTaskInputChange} multiple>
                   {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
                 </select>
               </div>
@@ -235,13 +262,23 @@ function Tasks() {
               </div>
               <div className="form-group">
                 <label>Description</label>
-                <textarea name="description" rows="3" value={editingTask.description} onChange={handleInputChange}></textarea>
+                <textarea name="description" rows="3" value={editingTask.description || ''} onChange={handleInputChange}></textarea>
               </div>
               <div className="form-group">
                 <label>Status</label>
                 <select name="status" value={editingTask.status} onChange={handleInputChange}>
                   {columns.map(status => <option key={status} value={status}>{status}</option>)}
                 </select>
+              </div>
+              <div className="form-group">
+                <label>Assign To</label>
+                <select name="assignedTo" value={editingTask.assignedTo} onChange={handleInputChange} multiple>
+                  {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                  <label>Log Time (in hours)</label>
+                  <input type="number" name="timeLog" value={timeLog} onChange={(e) => setTimeLog(e.target.value)} placeholder="e.g., 2.5" />
               </div>
               <button type="submit" className="add-button">Update Task</button>
             </form>

@@ -1,43 +1,43 @@
-// server/models/Task.js
-
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const TaskSchema = new mongoose.Schema({
+const taskSchema = new Schema({
   title: {
     type: String,
     required: true,
-    trim: true
   },
   description: {
     type: String,
-    trim: true
-  },
-  status: {
-    type: String,
-    enum: ['Backlog', 'To Do', 'In Progress', 'Done'], // "Backlog" is now a valid status
-    default: 'Backlog' // New tasks will default to the Backlog
-  },
-  priority: {
-    type: String,
-    enum: ['Low', 'Medium', 'High', 'Urgent'],
-    default: 'Medium'
-  },
-  dueDate: {
-    type: Date
+    required: false,
   },
   projectId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Project',
-    required: true
+    required: true,
   },
-  assignedTo: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  assignedTo: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+  }],
+  status: {
+    type: String,
+    enum: ['Backlog', 'To Do', 'In Progress', 'Done'],
+    default: 'Backlog',
   },
-  milestoneId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Milestone'
-  }
-}, { timestamps: true });
+  dueDate: {
+    type: Date,
+  },
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
 
-module.exports = mongoose.model('Task', TaskSchema);
+// Virtual property to link to time entries
+taskSchema.virtual('timeEntries', {
+  ref: 'TimeEntry',
+  localField: '_id',
+  foreignField: 'taskId'
+});
+
+module.exports = mongoose.model('Task', taskSchema);
