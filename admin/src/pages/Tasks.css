@@ -1,104 +1,100 @@
-.task-board-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+/* admin/src/pages/Tasks.css */
+
+.tasks-page {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.tasks-board {
+  display: flex;
   gap: 20px;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
 .task-column {
-  flex: 1;
-  min-width: 300px; /* Ensures columns don't get too squished */
-  background-color: #e9ecef;
+  background-color: #2a2a2a;
   border-radius: 8px;
+  width: 24%;
   padding: 15px;
-  display: flex;
-  flex-direction: column;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.task-column h2 {
-  font-size: 1.2rem;
-  color: #343a40;
-  margin: 0 0 15px 0;
+.column-header {
   padding-bottom: 10px;
-  border-bottom: 2px solid #dee2e6;
+  margin-bottom: 20px;
+  border-bottom: 3px solid;
+  text-align: center;
 }
 
-.tasks-container {
-    flex-grow: 1;
-    min-height: 500px;
-    border-radius: 5px;
+/* Added a new style for the Backlog column header */
+.column-header.backlog { border-color: #6c757d; } /* Gray for Backlog */
+.column-header.todo { border-color: #007bff; }
+.column-header.in-progress { border-color: #ffc107; }
+.column-header.done { border-color: #28a745; }
+
+
+.column-title {
+  font-size: 1.4rem;
+  color: #f0f0f0;
+  margin: 0;
+}
+
+.task-list {
+  min-height: 400px; /* Ensures droppable area is always available */
+  padding: 8px;
+  background-color: #333;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.task-list.is-dragging-over {
+  background-color: #444; /* Highlight when dragging over */
 }
 
 .task-card {
-  position: relative;
-  background-color: #fff;
-  border-radius: 5px;
+  background-color: #4a4a4a;
+  color: #f0f0f0;
+  border-radius: 6px;
   padding: 15px;
-  padding-left: 30px; /* Make space for the drag handle */
-  margin-bottom: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  /* cursor: grab; is no longer needed here */
-}
-
-.task-card h4 {
-  margin: 0 0 5px 0;
-  color: #212529;
-}
-
-.task-card p {
-    margin: 0;
-    font-size: 0.9rem;
-    color: #6c757d;
-}
-
-.task-project-name {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #6c757d;
-}
-
-.task-assignee {
-  margin-top: 10px;
-  font-size: 0.8rem;
-  font-weight: bold;
-  color: #34495e;
-  background-color: #ecf0f1;
-  padding: 2px 6px;
-  border-radius: 4px;
-  display: inline-block;
-}
-
-.edit-task-button {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  color: #6c757d;
-  padding: 5px;
-  border-radius: 50%;
-  line-height: 1;
-}
-
-.edit-task-button:hover {
-  background-color: #e9ecef;
-  color: #212529;
-}
-
-.drag-handle {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 20px;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   cursor: grab;
-  color: #bdc3c7;
+  border-left: 5px solid transparent;
+  transition: border-left-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.drag-icon {
+.task-card:hover {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.task-card-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 0 0 10px 0;
+}
+
+.task-card-meta {
+  font-size: 0.8rem;
+  color: #aaa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.project-title {
+  font-style: italic;
+}
+
+.assignee-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #007bff;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: bold;
 }

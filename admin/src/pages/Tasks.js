@@ -1,244 +1,163 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { DndContext, closestCenter } from '@dnd-kit/core';
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import './Shared.css';
 import './Tasks.css';
 
-// Draggable Task Card Component
-const TaskCard = ({ task, onEdit }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task._id });
-  const style = { transform: CSS.Transform.toString(transform), transition };
-  return (
-    <div className="task-card" ref={setNodeRef} style={style}>
-        <div className="drag-handle" {...attributes} {...listeners}>
-            <span className="drag-icon">::</span>
-        </div>
-        <div className="card-content">
-            <h4>{task.title}</h4>
-            <p className="task-project-name">{task.projectId?.title}</p>
-            <p className="task-assignee">{task.assignedTo?.name || 'Unassigned'}</p>
-        </div>
-        <button className="edit-task-button" onClick={() => onEdit(task)}>✏️</button>
-    </div>
-  );
-};
-
-// Droppable Column Component
-const TaskColumn = ({ id, title, tasks, onEdit }) => {
-  const { setNodeRef } = useSortable({ id });
-  return (
-    <div className="task-column">
-      <h2>{title} ({tasks.length})</h2>
-      <SortableContext id={id} items={tasks} strategy={verticalListSortingStrategy}>
-        <div ref={setNodeRef} className="tasks-container">
-          {tasks.map(task => <TaskCard key={task._id} task={task} onEdit={onEdit} />)}
-        </div>
-      </SortableContext>
-    </div>
-  );
-};
-
-
 function Tasks() {
   const [tasks, setTasks] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
-
-  const [newTask, setNewTask] = useState({ title: '', description: '', projectId: '', assignedTo: '' });
-  const [timeLog, setTimeLog] = useState({ hours: '', description: '' });
-  
   const token = localStorage.getItem('token');
+  const API_URL = process.env.REACT_APP_API_URL;
 
-  const fetchData = useCallback(async () => {
+  // Added 'Backlog' as the first column
+  const initialColumns = {
+    'Backlog': { id: 'Backlog', title: 'Backlog', taskIds: [] },
+    'To Do': { id: 'To Do', title: 'To Do', taskIds: [] },
+    'In Progress': { id: 'In Progress', title: 'In Progress', taskIds: [] },
+    'Done': { id: 'Done', title: 'Done', taskIds: [] },
+  };
+
+  const [columns, setColumns] = useState(initialColumns);
+
+  const fetchTasks = useCallback(async () => {
     setIsLoading(true);
     setError('');
     try {
-        const [tasksRes, projectsRes, usersRes, currentUserRes] = await Promise.all([
-            fetch(`${process.env.REACT_APP_API_URL}/api/tasks`, { headers: { 'x-auth-token': token } }),
-            fetch(`${process.env.REACT_APP_API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
-            fetch(`${process.env.REACT_APP_API_URL}/api/users`, { headers: { 'x-auth-token': token } }),
-            fetch(`${process.env.REACT_APP_API_URL}/api/auth/user`, { headers: { 'x-auth-token': token } })
-        ]);
-
-        // Only the essential data needs to be successful
-        if (!tasksRes.ok || !projectsRes.ok || !currentUserRes.ok) {
-            throw new Error('A network error occurred while fetching page data.');
+      const response = await fetch(`${API_URL}/api/tasks`, {
+        headers: { 'x-auth-token': token },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.msg || 'Failed to fetch tasks');
+      
+      setTasks(data);
+      
+      const newColumns = JSON.parse(JSON.stringify(initialColumns));
+      data.forEach(task => {
+        if (newColumns[task.status]) {
+          newColumns[task.status].taskIds.push(task._id);
         }
-
-        const tasksData = await tasksRes.json();
-        const projectsData = await projectsRes.json();
-        const currentUserData = await currentUserRes.json();
-        
-        let usersData = [];
-        // Handle the users list gracefully
-        if (usersRes.ok) {
-            // If the request for all users was successful (i.e., user is an admin)
-            usersData = await usersRes.json();
-        } else {
-            // If it failed, default to a list containing only the current user
-            usersData = [currentUserData];
-        }
-
-        // Apply filtering logic based on user role
-        if (currentUserData.role === 'CEO') {
-            setTasks(tasksData);
-        } else {
-            const myTasks = tasksData.filter(task => task.assignedTo?._id === currentUserData._id);
-            setTasks(myTasks);
-        }
-
-        setProjects(projectsData);
-        setUsers(usersData);
+      });
+      setColumns(newColumns);
 
     } catch (err) {
-        console.error("Failed to fetch data:", err);
-        setError(err.message);
+      setError(err.message);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-  }, [token]);
+  }, [token, API_URL]); // initialColumns is stable
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchTasks();
+  }, [fetchTasks]);
 
-  const handleDragEnd = async (event) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    
-    const activeTask = tasks.find(t => t._id === active.id);
-    const oldStatus = activeTask.status;
-    const newStatus = over.id;
+  const onDragEnd = async (result) => {
+    const { destination, source, draggableId } = result;
 
-    if (oldStatus !== newStatus) {
-      setTasks(currentTasks => 
-        currentTasks.map(t => (t._id === active.id ? { ...t, status: newStatus } : t))
-      );
-      
-      await fetch(`${process.env.REACT_APP_API_URL}/api/tasks/${active.id}/status`, {
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      return;
+    }
+
+    const start = columns[source.droppableId];
+    const finish = columns[destination.droppableId];
+    const newStatus = finish.id;
+
+    // Optimistic UI Update
+    const startTaskIds = Array.from(start.taskIds);
+    startTaskIds.splice(source.index, 1);
+    const newStart = { ...start, taskIds: startTaskIds };
+
+    const finishTaskIds = Array.from(finish.taskIds);
+    finishTaskIds.splice(destination.index, 0, draggableId);
+    const newFinish = { ...finish, taskIds: finishTaskIds };
+
+    setColumns(prev => ({
+      ...prev,
+      [newStart.id]: newStart,
+      [newFinish.id]: newFinish,
+    }));
+
+    // API Call to update task status
+    try {
+      const response = await fetch(`${API_URL}/api/tasks/${draggableId}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token,
+        },
         body: JSON.stringify({ status: newStatus }),
       });
+      if (!response.ok) {
+        throw new Error('Failed to update task status.');
+      }
+    } catch (err) {
+      // Revert UI on error
+      setError('Failed to update status. Please try again.');
+      setColumns(columns); // Revert to original state
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    if (editingTask) {
-        setEditingTask({ ...editingTask, [name]: value });
-    } else {
-        setNewTask({ ...newTask, [name]: value });
-    }
+  const getAssigneeInitial = (name) => {
+    return name ? name.charAt(0).toUpperCase() : '?';
   };
 
-  const handleTimeLogInputChange = (e) => {
-    setTimeLog({ ...timeLog, [e.target.name]: e.target.value });
-  };
-
-  const handleAddTask = async (e) => {
-    e.preventDefault();
-    await fetch(`${process.env.REACT_APP_API_URL}/api/tasks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-      body: JSON.stringify(newTask)
-    });
-    setShowAddModal(false);
-    setNewTask({ title: '', description: '', projectId: '', assignedTo: '' });
-    fetchData();
-  };
-
-  const openEditModal = (task) => {
-    setEditingTask(task);
-    setShowEditModal(true);
-  };
-
-  const handleUpdateTask = async (e) => {
-    e.preventDefault();
-    await fetch(`${process.env.REACT_APP_API_URL}/api/tasks/${editingTask._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-      body: JSON.stringify(editingTask)
-    });
-    fetchData();
-  };
-
-  const handleLogTime = async (e) => {
-    e.preventDefault();
-    await fetch(`${process.env.REACT_APP_API_URL}/api/tasks/${editingTask._id}/time`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-        body: JSON.stringify(timeLog)
-    });
-    setTimeLog({ hours: '', description: '' });
-    setShowEditModal(false); 
-  };
-  
-  const columns = ['To Do', 'In Progress', 'On Hold', 'Done'];
-  const tasksByColumn = (columnName) => tasks.filter(task => task.status && task.status.trim() === columnName);
-
-  if (isLoading) return <div>Loading tasks...</div>;
-  if (error) return <div style={{ color: 'red', padding: '20px' }}>Error: {error}</div>;
+  if (isLoading) return <div className="loading-message">Loading tasks...</div>;
+  if (error) return <div className="error-message">{error}</div>;
 
   return (
-    <div>
+    <div className="tasks-page">
       <div className="page-header">
         <h1 className="page-title">Task Board</h1>
-        <button className="add-button" onClick={() => setShowAddModal(true)}>+ Add Task</button>
       </div>
-
-      {showAddModal && (
-        <div className="modal-backdrop">
-          <div className="modal-content">
-            <div className="modal-header"><h2 className="modal-title">Add New Task</h2><button className="close-button" onClick={() => setShowAddModal(false)}>&times;</button></div>
-            <form onSubmit={handleAddTask}>
-              <div className="form-group"><label>Task Title</label><input type="text" name="title" onChange={handleInputChange} required /></div>
-              <div className="form-group"><label>Assign to Project</label><select name="projectId" onChange={handleInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
-              <div className="form-group"><label>Description</label><textarea name="description" rows="3" onChange={handleInputChange}></textarea></div>
-              <div className="form-group"><label>Assign To</label><select name="assignedTo" onChange={handleInputChange}><option value="">Unassigned</option>{users.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}</select></div>
-              <button type="submit" className="add-button">Save Task</button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showEditModal && editingTask && (
-        <div className="modal-backdrop">
-          <div className="modal-content">
-            <div className="modal-header"><h2 className="modal-title">Edit Task</h2><button className="close-button" onClick={() => setShowEditModal(false)}>&times;</button></div>
-            <form onSubmit={handleUpdateTask}>
-              <div className="form-group"><label>Task Title</label><input type="text" name="title" value={editingTask.title} onChange={handleInputChange} required /></div>
-              <div className="form-group"><label>Assign to Project</label><select name="projectId" value={editingTask.projectId?._id || editingTask.projectId} onChange={handleInputChange} required><option value="">Select a Project</option>{projects.map(project => (<option key={project._id} value={project._id}>{project.title}</option>))}</select></div>
-              <div className="form-group"><label>Description</label><textarea name="description" rows="3" value={editingTask.description} onChange={handleInputChange}></textarea></div>
-              <div className="form-group"><label>Assign To</label><select name="assignedTo" value={editingTask.assignedTo?._id || editingTask.assignedTo} onChange={handleInputChange}><option value="">Unassigned</option>{users.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}</select></div>
-              <div className="form-group"><label>Status</label><select name="status" value={editingTask.status} onChange={handleInputChange}><option value="To Do">To Do</option><option value="In Progress">In Progress</option><option value="On Hold">On Hold</option><option value="Done">Done</option></select></div>
-              <button type="submit" className="add-button">Update Task</button>
-            </form>
-            <hr style={{ margin: '30px 0' }} />
-            <form onSubmit={handleLogTime}>
-              <h3>Log Time for This Task</h3>
-              <div className="form-group"><label>Hours</label><input type="number" step="0.1" name="hours" value={timeLog.hours} onChange={handleTimeLogInputChange} required /></div>
-              <div className="form-group"><label>Work Description (Required)</label><textarea name="description" rows="2" value={timeLog.description} onChange={handleTimeLogInputChange}></textarea></div>
-              <button type="submit" className="add-button">Log Time</button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="task-board-container">
-          {columns.map(columnName => (
-            <TaskColumn key={columnName} id={columnName} title={columnName} tasks={tasksByColumn(columnName)} onEdit={openEditModal} />
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="tasks-board">
+          {Object.values(columns).map(column => (
+            <div key={column.id} className="task-column">
+              <div className={`column-header ${column.id.replace(/\s+/g, '-').toLowerCase()}`}>
+                <h2 className="column-title">{column.title}</h2>
+              </div>
+              <Droppable droppableId={column.id}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`task-list ${snapshot.isDraggingOver ? 'is-dragging-over' : ''}`}
+                  >
+                    {column.taskIds.map((taskId, index) => {
+                      const task = tasks.find(t => t._id === taskId);
+                      if (!task) return null;
+                      return (
+                        <Draggable key={task._id} draggableId={task._id} index={index}>
+                          {(provided) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className="task-card"
+                            >
+                              <h4 className="task-card-title">{task.title}</h4>
+                              <div className="task-card-meta">
+                                <span className="project-title">
+                                  {task.projectId ? task.projectId.title : 'No Project'}
+                                </span>
+                                <span className="assignee-avatar" title={task.assignedTo ? task.assignedTo.name : 'Unassigned'}>
+                                  {getAssigneeInitial(task.assignedTo ? task.assignedTo.name : null)}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      );
+                    })}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </div>
           ))}
         </div>
-      </DndContext>
+      </DragDropContext>
     </div>
   );
 }
