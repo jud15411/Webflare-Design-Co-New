@@ -1,3 +1,5 @@
+// In admin/src/pages/ProjectDetail.js
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import './Shared.css';
@@ -31,7 +33,6 @@ function ProjectDetail() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [totalHours, setTotalHours] = useState(0);
 
-  // State for the Add Milestone modal
   const [showAddMilestoneModal, setShowAddMilestoneModal] = useState(false);
   const [newMilestone, setNewMilestone] = useState({ name: '', description: '', dueDate: '' });
 
@@ -136,13 +137,11 @@ function ProjectDetail() {
     }
   };
 
-  // Handler for form input changes in the modal
   const handleMilestoneInputChange = (e) => {
     const { name, value } = e.target;
     setNewMilestone(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handler for submitting the new milestone
   const handleAddMilestone = async (e) => {
     e.preventDefault();
     try {
@@ -157,10 +156,9 @@ function ProjectDetail() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.msg || 'Failed to add milestone.');
 
-        // Add the new milestone to the state and close the modal
         setMilestones(prev => [...prev, data].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)));
         setShowAddMilestoneModal(false);
-        setNewMilestone({ name: '', description: '', dueDate: '' }); // Reset form
+        setNewMilestone({ name: '', description: '', dueDate: '' });
         displayApiMessage('Milestone added successfully!', 'success');
     } catch (err) {
         displayApiMessage(err.message, 'error');
@@ -201,6 +199,19 @@ function ProjectDetail() {
                 </span>
               </div>
               {milestone.description && <p className="milestone-description">{milestone.description}</p>}
+
+              {/* FIX: Display client suggestion if it exists */}
+              {milestone.clientSuggestions && (
+                <div className="client-suggestion-box">
+                  <p className="suggestion-title">
+                    Client Suggestion
+                    {milestone.lastSuggestedBy && ` by ${milestone.lastSuggestedBy.name}`}
+                    {milestone.lastSuggestionDate && ` on ${new Date(milestone.lastSuggestionDate).toLocaleDateString()}`}
+                  </p>
+                  <p className="suggestion-text">{milestone.clientSuggestions}</p>
+                </div>
+              )}
+
               <p className="milestone-due-date">
                 Due: {new Date(milestone.dueDate).toLocaleDateString()}
               </p>
@@ -258,7 +269,6 @@ function ProjectDetail() {
       
       {apiMessage && <div className={`message-banner ${messageType}`}>{apiMessage}</div>}
 
-      {/* Add Milestone Modal */}
       {showAddMilestoneModal && (
         <div className="modal-backdrop">
           <div className="modal-content">

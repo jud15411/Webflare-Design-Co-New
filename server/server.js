@@ -552,7 +552,7 @@ app.get('/api/projects/:projectId/hours', authMiddleware, async (req, res) => {
 
 app.get('/api/projects/:projectId/milestones', authMiddleware, async (req, res) => {
     try {
-        const milestones = await Milestone.find({ projectId: req.params.projectId }).sort({ dueDate: 1 });
+        const milestones = await Milestone.find({ projectId: req.params.projectId }).populate('lastSuggestedBy', 'name').sort({ dueDate: 1 });
         res.json(milestones);
     } catch (err) {
         console.error('Error fetching milestones for project:', err);
@@ -560,7 +560,7 @@ app.get('/api/projects/:projectId/milestones', authMiddleware, async (req, res) 
     }
 });
 
-app.post('/api/projects/:projectId/milestones', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+app.post('/api/projects/:projectId/milestones', authMiddleware, async (req, res) => {
     try {
         const { name, description, dueDate } = req.body;
         const { projectId } = req.params;
@@ -758,13 +758,13 @@ app.post('/api/projects/:projectId/files', authMiddleware, adminOnlyMiddleware, 
 
 app.get('/api/projects/:projectId/comments', authMiddleware, async (req, res) => {
     try {
-        const comments = await Comment.find({ projectId: req.params.projectId })
+        // FIX: The field in the Comment model is 'project', not 'projectId'.
+        const comments = await Comment.find({ project: req.params.projectId })
             .sort({ createdAt: -1 })
             .populate('author', 'name');
         res.json(comments);
     } catch (err) {
         console.error('Error fetching comments:', err);
-        // Change res.send to res.json
         res.status(500).json({ msg: 'Server Error fetching comments.' });
     }
 });
