@@ -234,6 +234,10 @@ function Tasks() {
                 <input type="text" name="title" value={editingTask.title} onChange={handleInputChange} required />
               </div>
               <div className="form-group">
+                <label>Description</label>
+                <textarea name="description" rows="3" value={editingTask.description} onChange={handleInputChange}></textarea>
+              </div>
+              <div className="form-group">
                 <label>Status</label>
                 <select name="status" value={editingTask.status} onChange={handleInputChange}>
                   {columns.map(status => <option key={status} value={status}>{status}</option>)}
