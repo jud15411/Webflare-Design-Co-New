@@ -14,14 +14,26 @@ function ClientProjectDetail() {
 
   const fetchProjectDetails = useCallback(async () => {
     setIsLoading(true);
+    setError('');
     try {
-      const response = await authFetch(`${process.env.REACT_APP_API_URL}/api/client/projects/${projectId}`);
+      // Corrected: Fetch all projects and find the specific one by ID, matching the original logic.
+      const response = await authFetch(`${process.env.REACT_APP_API_URL}/api/client/projects`);
       const data = await response.json();
-      if (!response.ok) throw new Error(data.msg || 'Failed to fetch project details.');
-      const sortedMilestones = data.milestones.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-      setProject({ ...data, milestones: sortedMilestones });
+
+      if (!response.ok) {
+        throw new Error(data.msg || 'Failed to fetch project details.');
+      }
+
+      const foundProject = data.find(p => p._id === projectId);
+      if (foundProject) {
+        const sortedMilestones = foundProject.milestones.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        setProject({ ...foundProject, milestones: sortedMilestones });
+      } else {
+        setError('Project not found or you do not have access.');
+      }
     } catch (err) {
-      setError(err.message);
+      console.error("Error fetching project details:", err);
+      setError(err.message || 'Error loading project details.');
     } finally {
       setIsLoading(false);
     }
