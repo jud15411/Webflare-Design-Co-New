@@ -177,3 +177,139 @@
 .status-completed { background-color: #28a745; color: white; }
 .status-on-hold { background-color: #ffc107; color: black; }
 .status-canceled { background-color: #dc3545; color: white; }
+
+.milestone-section h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.milestone-section .add-button {
+  background-color: #28a745;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+}
+
+.milestone-section .add-button:hover {
+  background-color: #218838;
+}
+
+/* Reusable Modal Styles (copied from Projects.css for consistency) */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #3a3a3a;
+  color: #f0f0f0;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  width: 90%;
+  max-width: 500px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.modal-title {
+  font-size: 1.8rem;
+  color: #007bff;
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #f0f0f0;
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.close-button:hover {
+  color: #aaa;
+}
+
+.modal-content .form-group {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.modal-content .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #ccc;
+  font-size: 0.95rem;
+}
+
+.modal-content .form-group input[type="text"],
+.modal-content .form-group input[type="date"],
+.modal-content .form-group textarea {
+  width: 100%; /* Full width */
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+  padding: 10px;
+  background-color: #444;
+  border: 1px solid #555;
+  border-radius: 5px;
+  color: #f0f0f0;
+  font-size: 1rem;
+}
+
+.modal-content .form-group input:focus,
+.modal-content .form-group textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 30px;
+  gap: 10px;
+}
+
+.modal-actions .cancel-button {
+  background-color: #6c757d;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+}
+
+.modal-actions .cancel-button:hover {
+  background-color: #5a6268;
+}
+
+.modal-actions .submit-button {
+  background-color: #28a745;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+}
+
+.modal-actions .submit-button:hover {
+  background-color: #218838;
+}

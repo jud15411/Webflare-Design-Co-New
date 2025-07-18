@@ -559,6 +559,32 @@ app.get('/api/projects/:projectId/milestones', authMiddleware, async (req, res) 
     }
 });
 
+app.post('/api/projects/:projectId/milestones', authMiddleware, adminOnlyMiddleware, async (req, res) => {
+    try {
+        const { name, description, dueDate } = req.body;
+        const { projectId } = req.params;
+
+        // Basic validation
+        if (!name || !dueDate) {
+            return res.status(400).json({ msg: 'Please provide a name and a due date for the milestone.' });
+        }
+
+        const newMilestone = new Milestone({
+            name,
+            description,
+            dueDate,
+            projectId,
+            status: 'Not Started' // Default status
+        });
+
+        await newMilestone.save();
+        res.status(201).json(newMilestone); // Return the newly created milestone
+    } catch (err) {
+        console.error('Error adding milestone:', err);
+        res.status(500).json({ msg: 'Server Error adding milestone.' });
+    }
+});
+
 // == MILESTONES ==
 app.post('/api/milestones', authMiddleware, adminOnlyMiddleware, async (req, res) => {
     try {

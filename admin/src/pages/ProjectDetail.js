@@ -24,13 +24,16 @@ function ProjectDetail() {
   const [apiMessage, setApiMessage] = useState('');
   const [messageType, setMessageType] = useState('');
 
-  // Add new state for milestones
   const [milestones, setMilestones] = useState([]);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [totalHours, setTotalHours] = useState(0);
+
+  // State for the Add Milestone modal
+  const [showAddMilestoneModal, setShowAddMilestoneModal] = useState(false);
+  const [newMilestone, setNewMilestone] = useState({ name: '', description: '', dueDate: '' });
 
   const token = localStorage.getItem('token');
   const API_URL = process.env.REACT_APP_API_URL;
@@ -42,7 +45,6 @@ function ProjectDetail() {
       const projectData = await fetchData(`${API_URL}/api/projects/${projectId}`, token);
       setProject(projectData);
 
-      // Add fetch call for milestones
       const milestonesData = await fetchData(`${API_URL}/api/projects/${projectId}/milestones`, token);
       setMilestones(milestonesData);
 
@@ -134,6 +136,36 @@ function ProjectDetail() {
     }
   };
 
+  // Handler for form input changes in the modal
+  const handleMilestoneInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewMilestone(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handler for submitting the new milestone
+  const handleAddMilestone = async (e) => {
+    e.preventDefault();
+    try {
+        const response = await fetch(`${API_URL}/api/projects/${projectId}/milestones`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-auth-token': token,
+            },
+            body: JSON.stringify(newMilestone),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.msg || 'Failed to add milestone.');
+
+        // Add the new milestone to the state and close the modal
+        setMilestones(prev => [...prev, data].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)));
+        setShowAddMilestoneModal(false);
+        setNewMilestone({ name: '', description: '', dueDate: '' }); // Reset form
+        displayApiMessage('Milestone added successfully!', 'success');
+    } catch (err) {
+        displayApiMessage(err.message, 'error');
+    }
+  };
 
   if (isLoading) return <div>Loading project details...</div>;
   if (error) return <div className="error-message">{error}</div>;
@@ -154,15 +186,16 @@ function ProjectDetail() {
         <p><strong>Total Hours Logged:</strong> {totalHours.toFixed(2)}</p>
       </div>
 
-      {/* Add the new Milestones section here */}
       <div className="milestone-section">
-        <h3>Project Milestones</h3>
+        <h3>
+          Project Milestones
+          <button className="add-button" onClick={() => setShowAddMilestoneModal(true)}>+ Add Milestone</button>
+        </h3>
         <div className="milestone-list">
           {milestones.length > 0 ? milestones.map(milestone => (
             <div key={milestone._id} className="milestone-item">
               <div className="milestone-header">
                 <span className="milestone-name">{milestone.name}</span>
-                {/* Dynamically generate status class, e.g., "status-in-progress" */}
                 <span className={`milestone-status status-${milestone.status.replace(/\s+/g, '-').toLowerCase()}`}>
                   {milestone.status}
                 </span>
@@ -224,6 +257,36 @@ function ProjectDetail() {
       </div>
       
       {apiMessage && <div className={`message-banner ${messageType}`}>{apiMessage}</div>}
+
+      {/* Add Milestone Modal */}
+      {showAddMilestoneModal && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2 className="modal-title">Add New Milestone</h2>
+              <button className="close-button" onClick={() => setShowAddMilestoneModal(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleAddMilestone}>
+              <div className="form-group">
+                <label>Milestone Name</label>
+                <input type="text" name="name" value={newMilestone.name} onChange={handleMilestoneInputChange} required />
+              </div>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea name="description" rows="3" value={newMilestone.description} onChange={handleMilestoneInputChange}></textarea>
+              </div>
+              <div className="form-group">
+                <label>Due Date</label>
+                <input type="date" name="dueDate" value={newMilestone.dueDate} onChange={handleMilestoneInputChange} required />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="cancel-button" onClick={() => setShowAddMilestoneModal(false)}>Cancel</button>
+                <button type="submit" className="submit-button">Add Milestone</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
