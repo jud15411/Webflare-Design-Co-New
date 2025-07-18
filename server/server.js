@@ -408,60 +408,57 @@ app.get('/api/projects', authMiddleware, async (req, res) => {
     try {
         const projects = await Project.aggregate([
             {
+                // Step 1: Lookup the client details for each project
                 $lookup: {
-                    from: 'comments',
-                    localField: '_id',
-                    foreignField: 'project',
-                    as: 'comments'
-                }
-            },
-            {
-                $lookup: {
-                    from: 'clients',
-                    localField: 'clientId', // Use the original clientId from Project
+                    from: 'clients', // The name of the clients collection
+                    localField: 'clientId',
                     foreignField: '_id',
                     as: 'clientDetails'
                 }
             },
-            { $unwind: { path: '$clientDetails', preserveNullAndEmptyArrays: true } },
             {
-                $lookup: { // Lookup Milestones for each project
-                    from: 'milestones',
+                // Step 2: Deconstruct the clientDetails array. Use preserveNullAndEmptyArrays
+                // to keep projects that might not have a client linked.
+                $unwind: {
+                    path: '$clientDetails',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                // Step 3: Lookup comments to get a count
+                $lookup: {
+                    from: 'comments', // The name of the comments collection
                     localField: '_id',
-                    foreignField: 'projectId',
-                    as: 'milestones'
+                    foreignField: 'projectId', // Ensure this field name is correct in your Comment model
+                    as: 'comments'
                 }
             },
             {
-                $addFields: {
-                    commentCount: { $size: '$comments' },
-                    client: '$clientDetails' // This maps the populated client object to a new field 'client'
-                }
-            },
-            { // FIX: Explicitly include _id and other necessary fields in the final projection
+                // Step 4: Create the final project structure
                 $project: {
-                    _id: 1, // Explicitly include the _id
+                    _id: 1,
                     title: 1,
-                    description: 1,
                     status: 1,
                     imageUrl: 1,
-                    isFeatured: 1,
                     createdAt: 1,
-                    updatedAt: 1,
-                    commentCount: 1,
-                    clientId: '$clientId', // Keep the original clientId (the ID from Project document)
-                    client: { // Project specific fields to return the populated client details
-                        _id: '$clientDetails._id', // Access populated client's _id
-                        name: '$clientDetails.name' // Access populated client's name
+                    // Create a client object, handling cases where the client might be null
+                    client: {
+                        _id: '$clientDetails._id',
+                        name: '$clientDetails.name'
                     },
-                    milestones: 1 // Include populated milestones for the project list if needed, or remove to simplify
+                    // Calculate the number of comments
+                    commentCount: { $size: '$comments' }
                 }
+            },
+            {
+                // Step 5: Sort the results
+                $sort: { createdAt: -1 }
             }
         ]);
         res.json(projects);
     } catch (err) {
         console.error('Error fetching all projects (aggregation):', err);
-        res.status(500).json({ msg: 'Server Error fetching all projects.' });
+        res.status(500).json({ msg: 'Server Error fetching projects.' });
     }
 });
 
