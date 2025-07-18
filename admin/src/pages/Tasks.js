@@ -4,43 +4,44 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './Shared.css';
 import './Tasks.css';
 
-// Task Card Component
+// Task Card Component (no changes needed here)
 const TaskCard = ({ task, onEdit }) => (
-  <div className="task-card">
-    <h4 className="task-card-title">{task.title}</h4>
-    <div className="task-card-meta">
-      <span className="project-title">
-        {task.projectId ? task.projectId.title : 'No Project'}
-      </span>
-      <div className="assignee-avatars">
-        {task.assignedTo && task.assignedTo.length > 0 ? (
-          task.assignedTo.map(user => (
-            <span key={user._id} className="assignee-avatar" title={user.name}>
-              {user.name.charAt(0).toUpperCase()}
-            </span>
-          ))
-        ) : (
-          <span className="assignee-avatar" title="Unassigned">?</span>
-        )}
+    <div className="task-card">
+      <h4 className="task-card-title">{task.title}</h4>
+      <div className="task-card-meta">
+        <span className="project-title">
+          {task.projectId ? task.projectId.title : 'No Project'}
+        </span>
+        <div className="assignee-avatars">
+          {task.assignedTo && task.assignedTo.length > 0 ? (
+            task.assignedTo.map(user => (
+              <span key={user._id} className="assignee-avatar" title={user.name}>
+                {user.name.charAt(0).toUpperCase()}
+              </span>
+            ))
+          ) : (
+            <span className="assignee-avatar" title="Unassigned">?</span>
+          )}
+        </div>
       </div>
+      <button className="edit-task-button" onClick={() => onEdit(task)}>✏️</button>
     </div>
-    <button className="edit-task-button" onClick={() => onEdit(task)}>✏️</button>
-  </div>
 );
 
-// Task Column Component
+// Task Column Component (no changes needed here)
 const TaskColumn = ({ title, tasks, onEdit }) => (
-  <div className="task-column">
-    <div className={`column-header ${title.replace(/\s+/g, '-').toLowerCase()}`}>
-      <h2 className="column-title">{title} ({tasks.length})</h2>
+    <div className="task-column">
+      <div className={`column-header ${title.replace(/\s+/g, '-').toLowerCase()}`}>
+        <h2 className="column-title">{title} ({tasks.length})</h2>
+      </div>
+      <div className="task-list">
+        {tasks.map(task => (
+          <TaskCard key={task._id} task={task} onEdit={onEdit} />
+        ))}
+      </div>
     </div>
-    <div className="task-list">
-      {tasks.map(task => (
-        <TaskCard key={task._id} task={task} onEdit={onEdit} />
-      ))}
-    </div>
-  </div>
 );
+
 
 function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -137,21 +138,38 @@ function Tasks() {
   const handleUpdateTask = async (e) => {
     e.preventDefault();
     if (!editingTask) return;
-
-    const taskUpdateData = { ...editingTask };
-    if (timeLog) {
-      taskUpdateData.timeLog = timeLog;
-    }
-
+  
     try {
+      // If time was logged, create a new time entry first
+      if (timeLog && parseFloat(timeLog) > 0) {
+        const timeEntryData = {
+          hours: parseFloat(timeLog),
+          taskId: editingTask._id,
+          projectId: editingTask.projectId._id
+        };
+  
+        const timeRes = await fetch(`${API_URL}/api/timeentries`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': token,
+          },
+          body: JSON.stringify(timeEntryData),
+        });
+  
+        if (!timeRes.ok) throw new Error('Failed to log time.');
+      }
+  
+      // Then, update the task details
       const response = await fetch(`${API_URL}/api/tasks/${editingTask._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'x-auth-token': token,
         },
-        body: JSON.stringify(taskUpdateData),
+        body: JSON.stringify(editingTask),
       });
+  
       if (!response.ok) throw new Error('Failed to update task.');
       
       closeModals();
@@ -276,9 +294,12 @@ function Tasks() {
                   {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
                 </select>
               </div>
-              <div className="form-group">
-                  <label>Log Time (in hours)</label>
-                  <input type="number" name="timeLog" value={timeLog} onChange={(e) => setTimeLog(e.target.value)} placeholder="e.g., 2.5" />
+              <div className="form-group time-log-group">
+                  <label>Log Time</label>
+                  <div className="time-log-input-wrapper">
+                    <input type="number" name="timeLog" value={timeLog} onChange={(e) => setTimeLog(e.target.value)} placeholder="e.g., 2.5" />
+                    <span>hours</span>
+                  </div>
               </div>
               <button type="submit" className="add-button">Update Task</button>
             </form>

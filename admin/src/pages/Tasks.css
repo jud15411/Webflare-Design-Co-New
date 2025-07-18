@@ -136,3 +136,30 @@
 
 .modal-title { font-size: 1.8rem; color: #007bff; margin: 0; }
 .close-button { background: none; border: none; color: #f0f0f0; font-size: 2rem; cursor: pointer; padding: 0; }
+
+.time-log-group {
+    border-top: 1px solid #555;
+    padding-top: 20px;
+    margin-top: 20px;
+}
+
+.time-log-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.time-log-input-wrapper input {
+    width: 100px;
+    text-align: center;
+    background-color: #2a2a2a;
+    border: 1px solid #777;
+    color: #f0f0f0;
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.time-log-input-wrapper span {
+    color: #aaa;
+    font-style: italic;
+}
