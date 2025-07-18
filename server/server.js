@@ -1156,6 +1156,44 @@ app.get('/api/services', async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 
+app.post('/api/services', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const newService = new Service(req.body);
+        await newService.save();
+        res.status(201).json(newService);
+    } catch (err) {
+        console.error("Error creating service:", err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// PUT (update) a service by ID
+app.put('/api/services/:id', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const service = await Service.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!service) {
+            return res.status(404).json({ msg: 'Service not found' });
+        }
+        res.json(service);
+    } catch (err) {
+        console.error("Error updating service:", err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// DELETE a service by ID
+app.delete('/api/services/:id', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const service = await Service.findByIdAndDelete(req.params.id);
+        if (!service) {
+            return res.status(404).json({ msg: 'Service not found' });
+        }
+        res.json({ msg: 'Service deleted successfully' });
+    } catch (err) {
+        console.error("Error deleting service:", err.message);
+        res.status(500).send('Server Error');
+    }
+});
 
 // == NOTIFICATIONS ==
 app.get('/api/notifications', authMiddleware, async (req, res) => {
