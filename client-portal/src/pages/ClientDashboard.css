@@ -1,77 +1,149 @@
 /* client-portal/src/pages/ClientDashboard.css */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+:root {
+  --primary-color: #6a5acd; /* Slate Blue */
+  --secondary-color: #f0f2f5; /* Light Gray */
+  --background-color: #1a1a1a;
+  --text-color: #e0e0e0;
+  --card-background: #2a2a2a;
+  --border-radius: 12px;
+  --box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
 
 .client-dashboard {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: 1400px;
+  margin: 40px auto;
+  padding: 0 40px;
 }
 
-.client-dashboard .page-header {
-  margin-bottom: 30px;
+.dashboard-header {
   text-align: center;
+  margin-bottom: 50px;
 }
 
-.client-dashboard .page-title {
-  color: #007bff;
-  font-size: 2.5rem;
+.dashboard-header h1 {
+  font-size: 3rem;
+  color: var(--primary-color);
+  margin-bottom: 10px;
 }
 
-.project-list {
+.dashboard-header p {
+  font-size: 1.2rem;
+  color: #a0a0a0;
+}
+
+.project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 25px;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 30px;
+}
+
+.project-card-container {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.project-card-container:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+}
+
+.project-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  height: 100%;
 }
 
 .project-card {
-  background-color: #2a2a2a;
-  border-radius: 10px;
-  padding: 25px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  background: var(--card-background);
+  border-radius: var(--border-radius);
+  padding: 30px;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  border: 1px solid #333;
+}
+
+.project-card-header {
+  display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
 }
 
 .project-card h3 {
-  color: #f0f0f0;
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 1.6rem;
+  font-size: 1.8rem;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.2;
 }
 
-.project-card p {
-  color: #ccc;
-  margin-bottom: 8px;
-  font-size: 0.95rem;
-  flex-grow: 1; /* Allows description to take up available space */
+.project-description {
+  flex-grow: 1;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #c0c0c0;
+  margin-bottom: 20px;
 }
 
-.project-card .project-status {
-  font-weight: bold;
-  padding: 3px 8px;
-  border-radius: 5px;
-  color: white; /* Default text color */
+.project-card-footer {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid #444;
+  text-align: right;
+  font-weight: 500;
+  color: var(--primary-color);
 }
 
-/* Status specific colors */
-.project-status.not-started { background-color: #6c757d; } /* Gray */
-.project-status.in-progress { background-color: #007bff; } /* Blue */
-.project-status.completed { background-color: #28a745; } /* Green */
-.project-status.on-hold { background-color: #ffc107; color: #333; } /* Yellow */
-.project-status.canceled { background-color: #dc3545; } /* Red */
-
-.view-details-button {
-  display: inline-block;
-  background-color: #007bff;
-  color: white;
-  padding: 10px 15px;
-  border-radius: 5px;
-  text-decoration: none;
-  margin-top: 15px;
-  transition: background-color 0.2s ease;
-  align-self: flex-start; /* Align button to start of flex item */
+/* Status Badges */
+.project-status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.view-details-button:hover {
-  background-color: #0056b3;
+.project-status-badge.not-started { background-color: #6c757d; color: white; }
+.project-status-badge.in-progress { background-color: #007bff; color: white; }
+.project-status-badge.completed { background-color: #28a745; color: white; }
+.project-status-badge.on-hold { background-color: #ffc107; color: #333; }
+.project-status-badge.canceled { background-color: #dc3545; color: white; }
+
+/* Loading and Empty States */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.loader {
+  border: 8px solid #f3f3f3;
+  border-top: 8px solid var(--primary-color);
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 50px;
+  background: var(--card-background);
+  border-radius: var(--border-radius);
+  grid-column: 1 / -1;
 }

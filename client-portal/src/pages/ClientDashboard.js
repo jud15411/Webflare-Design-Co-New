@@ -2,10 +2,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../AuthContext';
 import { Link } from 'react-router-dom';
-import './ClientDashboard.css'; // We'll create this CSS file next
+import './ClientDashboard.css';
 
 function ClientDashboard() {
-  const { user, authFetch } = useAuth(); // Use authFetch for authenticated requests
+  const { user, authFetch } = useAuth();
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -14,7 +14,6 @@ function ClientDashboard() {
     setIsLoading(true);
     setError('');
     try {
-      // Use authFetch for this request
       const response = await authFetch(`${process.env.REACT_APP_API_URL}/api/client/projects`);
       const data = await response.json();
 
@@ -28,16 +27,16 @@ function ClientDashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [authFetch]); // Dependency on authFetch
+  }, [authFetch]);
 
   useEffect(() => {
     if (user && user.role === 'Client') {
       fetchClientProjects();
     }
-  }, [user, fetchClientProjects]); // Dependency on user and fetchClientProjects
+  }, [user, fetchClientProjects]);
 
   if (isLoading) {
-    return <div className="loading-message">Loading your projects...</div>;
+    return <div className="loading-container"><div className="loader"></div></div>;
   }
 
   if (error) {
@@ -46,24 +45,35 @@ function ClientDashboard() {
 
   return (
     <div className="client-dashboard">
-      <div className="page-header">
-        <h1 className="page-title">My Projects</h1>
-      </div>
-      <div className="project-list">
+      <header className="dashboard-header">
+        <h1>Welcome, {user?.name || 'Client'}</h1>
+        <p>Here’s a summary of your active and past projects.</p>
+      </header>
+      <main className="project-grid">
         {projects.length > 0 ? (
           projects.map(project => (
-            <div key={project._id} className="project-card">
-              <h3>{project.title}</h3>
-              <p>{project.description}</p>
-              <p>Status: <span className={`project-status ${project.status.toLowerCase().replace(/\s/g, '-')}`}>{project.status}</span></p>
-              <p>Client Company: {project.clientId ? project.clientId.name : 'N/A'}</p>
-              <Link to={`/projects/${project._id}`} className="view-details-button">View Details</Link>
+            <div key={project._id} className="project-card-container">
+              <Link to={`/projects/${project._id}`} className="project-card-link">
+                <div className="project-card">
+                  <div className="project-card-header">
+                    <h3>{project.title}</h3>
+                    <span className={`project-status-badge ${project.status.toLowerCase().replace(/\s/g, '-')}`}>{project.status}</span>
+                  </div>
+                  <p className="project-description">{project.description}</p>
+                  <div className="project-card-footer">
+                    <span>View Project Details</span>
+                  </div>
+                </div>
+              </Link>
             </div>
           ))
         ) : (
-          <p className="empty-message">No projects found for your account.</p>
+          <div className="empty-state">
+            <h2>No Projects Found</h2>
+            <p>It looks like you don't have any projects with us yet. Contact us to get started!</p>
+          </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
