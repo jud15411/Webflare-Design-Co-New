@@ -24,6 +24,8 @@ function ProjectDetail() {
   const [apiMessage, setApiMessage] = useState('');
   const [messageType, setMessageType] = useState('');
 
+  // Add new state for milestones
+  const [milestones, setMilestones] = useState([]);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [files, setFiles] = useState([]);
@@ -40,13 +42,16 @@ function ProjectDetail() {
       const projectData = await fetchData(`${API_URL}/api/projects/${projectId}`, token);
       setProject(projectData);
 
+      // Add fetch call for milestones
+      const milestonesData = await fetchData(`${API_URL}/api/projects/${projectId}/milestones`, token);
+      setMilestones(milestonesData);
+
       const filesData = await fetchData(`${API_URL}/api/projects/${projectId}/files`, token);
       setFiles(filesData);
 
       const commentsData = await fetchData(`${API_URL}/api/projects/${projectId}/comments`, token);
       setComments(commentsData);
       
-      // FIX: Extract the numeric value from the returned object
       const hoursData = await fetchData(`${API_URL}/api/projects/${projectId}/hours`, token);
       setTotalHours(hoursData.totalHours || 0);
 
@@ -122,7 +127,6 @@ function ProjectDetail() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.msg || 'Failed to post comment.');
       
-      // FIX: Add the new comment object to the beginning of the existing comments array
       setComments(prevComments => [data, ...prevComments]);
       setNewComment('');
     } catch (err) {
@@ -148,6 +152,28 @@ function ProjectDetail() {
         <p><strong>Client:</strong> {project.clientId ? project.clientId.name : 'N/A'}</p>
         <p><strong>Status:</strong> {project.status}</p>
         <p><strong>Total Hours Logged:</strong> {totalHours.toFixed(2)}</p>
+      </div>
+
+      {/* Add the new Milestones section here */}
+      <div className="milestone-section">
+        <h3>Project Milestones</h3>
+        <div className="milestone-list">
+          {milestones.length > 0 ? milestones.map(milestone => (
+            <div key={milestone._id} className="milestone-item">
+              <div className="milestone-header">
+                <span className="milestone-name">{milestone.name}</span>
+                {/* Dynamically generate status class, e.g., "status-in-progress" */}
+                <span className={`milestone-status status-${milestone.status.replace(/\s+/g, '-').toLowerCase()}`}>
+                  {milestone.status}
+                </span>
+              </div>
+              {milestone.description && <p className="milestone-description">{milestone.description}</p>}
+              <p className="milestone-due-date">
+                Due: {new Date(milestone.dueDate).toLocaleDateString()}
+              </p>
+            </div>
+          )) : <p>No milestones have been set for this project yet.</p>}
+        </div>
       </div>
 
       <div className="file-section">

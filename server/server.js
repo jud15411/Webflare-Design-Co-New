@@ -549,6 +549,16 @@ app.get('/api/projects/:projectId/hours', authMiddleware, async (req, res) => {
   }
 });
 
+app.get('/api/projects/:projectId/milestones', authMiddleware, async (req, res) => {
+    try {
+        const milestones = await Milestone.find({ projectId: req.params.projectId }).sort({ dueDate: 1 });
+        res.json(milestones);
+    } catch (err) {
+        console.error('Error fetching milestones for project:', err);
+        res.status(500).json({ msg: 'Server Error fetching milestones.' });
+    }
+});
+
 // == MILESTONES ==
 app.post('/api/milestones', authMiddleware, adminOnlyMiddleware, async (req, res) => {
     try {
