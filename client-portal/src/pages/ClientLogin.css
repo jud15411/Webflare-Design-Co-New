@@ -46,34 +46,42 @@
   width: calc(100% - 22px); /* Account for padding+border */
   padding: 11px;
   background-color: #333;
-  border: 1px solid #444;
+  border: 1px solid #555;
   border-radius: 5px;
   color: #f0f0f0;
   font-size: 1rem;
 }
 
-.client-login-box .input-group input:focus {
-  border-color: #007bff;
-  outline: none;
-}
-
-.client-login-box .login-button {
+.login-button {
   width: 100%;
   padding: 12px;
-  margin-top: 20px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  background-color: #007bff;
+  background-color: #6a5acd;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 500;
   transition: background-color 0.2s ease;
 }
 
-.client-login-box .login-button:hover {
-  background-color: #0056b3;
+.login-button:hover {
+  background-color: #5a4ab9;
 }
 
-/* Reusing general message styles from index.css */
-/* .message-banner.success, .message-banner.error can be used directly */
+.message-banner {
+  padding: 10px;
+  margin-bottom: 20px;
+  border-radius: 5px;
+  font-weight: 500;
+}
+
+.message-banner.success {
+  background-color: #28a745;
+  color: white;
+}
+
+.message-banner.error {
+  background-color: #dc3545;
+  color: white;
+}
