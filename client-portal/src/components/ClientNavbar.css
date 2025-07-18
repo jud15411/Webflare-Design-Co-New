@@ -1,45 +1,70 @@
 /* client-portal/src/components/ClientNavbar.css */
-
 .client-navbar {
-  background-color: #333;
-  padding: 15px 30px;
+  background-color: #2a2a2a;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  padding: 15px 0;
+  border-bottom: 1px solid #333;
+}
+
+.navbar-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .navbar-brand a {
-  color: #007bff;
-  font-size: 1.5rem;
+  color: #6a5acd;
+  font-size: 2rem;
   font-weight: bold;
   text-decoration: none;
+  transition: color 0.3s ease;
 }
 
-.navbar-links span {
-  margin-right: 20px;
-  color: #f0f0f0;
+.navbar-brand a:hover {
+  color: #8374d3;
 }
 
-.navbar-links a {
-  color: #f0f0f0;
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+}
+
+.welcome-message {
+  color: #a0a0a0;
+  font-size: 1rem;
+}
+
+.nav-link {
+  color: #e0e0e0;
   text-decoration: none;
-  margin-right: 20px;
+  font-size: 1rem;
   font-weight: 500;
-  transition: color 0.2s ease;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.navbar-links a:hover {
-  color: #007bff;
+.nav-link:hover {
+  background-color: #3a3a3a;
+  color: #ffffff;
 }
 
-.navbar-links .logout-button {
-  background-color: #dc3545; /* Red logout button */
-  padding: 8px 15px;
-  border-radius: 5px;
-  font-size: 0.9rem;
+.logout-button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
 }
 
-.navbar-links .logout-button:hover {
+.logout-button:hover {
   background-color: #c82333;
 }
