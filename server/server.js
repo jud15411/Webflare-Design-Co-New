@@ -1156,7 +1156,7 @@ app.get('/api/services', async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 
-app.post('/api/services', authMiddleware, adminMiddleware, async (req, res) => {
+app.post('/api/services', authMiddleware, adminOnlyMiddleware, async (req, res) => {
     try {
         const newService = new Service(req.body);
         await newService.save();
@@ -1168,7 +1168,7 @@ app.post('/api/services', authMiddleware, adminMiddleware, async (req, res) => {
 });
 
 // PUT (update) a service by ID
-app.put('/api/services/:id', authMiddleware, adminMiddleware, async (req, res) => {
+app.put('/api/services/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => {
     try {
         const service = await Service.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!service) {
@@ -1182,7 +1182,7 @@ app.put('/api/services/:id', authMiddleware, adminMiddleware, async (req, res) =
 });
 
 // DELETE a service by ID
-app.delete('/api/services/:id', authMiddleware, adminMiddleware, async (req, res) => {
+app.delete('/api/services/:id', authMiddleware, adminOnlyMiddleware, async (req, res) => {
     try {
         const service = await Service.findByIdAndDelete(req.params.id);
         if (!service) {
