@@ -32,38 +32,37 @@ function ProjectDetail() {
   const [totalHours, setTotalHours] = useState(0);
 
   const token = localStorage.getItem('token');
+  const API_URL = process.env.REACT_APP_API_URL; // Define API URL for reuse
 
   const loadProjectData = useCallback(async () => {
     setIsLoading(true);
     setError('');
     try {
-      // Fetch data sequentially for better error reporting
-      const projectData = await fetchData(`/api/projects/${projectId}`, token);
+      // FIX: Added API_URL to all fetch calls
+      const projectData = await fetchData(`${API_URL}/api/projects/${projectId}`, token);
       setProject(projectData);
 
-      const filesData = await fetchData(`/api/projects/${projectId}/files`, token);
+      const filesData = await fetchData(`${API_URL}/api/projects/${projectId}/files`, token);
       setFiles(filesData);
 
-      const commentsData = await fetchData(`/api/projects/${projectId}/comments`, token);
+      const commentsData = await fetchData(`${API_URL}/api/projects/${projectId}/comments`, token);
       setComments(commentsData);
       
-      const hoursData = await fetchData(`/api/projects/${projectId}/hours`, token);
+      const hoursData = await fetchData(`${API_URL}/api/projects/${projectId}/hours`, token);
       setTotalHours(hoursData.totalHours || 0);
 
     } catch (err) {
       console.error("Detailed Fetch Error:", err);
-      setError(err.message); // This will now show which API call failed
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, token]);
+  }, [projectId, token, API_URL]); // Added API_URL to dependency array
 
   useEffect(() => {
     loadProjectData();
   }, [loadProjectData]);
 
-  // ... (the rest of your component functions: handleFileChange, handleFileUpload, handleCommentSubmit)
-  // No changes are needed for the rest of the file.
   const displayApiMessage = (message, type) => {
     setApiMessage(message);
     setMessageType(type);
@@ -88,7 +87,8 @@ function ProjectDetail() {
     formData.append('projectFile', selectedFile);
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/files`, {
+      // FIX: Added API_URL to the fetch call
+      const response = await fetch(`${API_URL}/api/projects/${projectId}/files`, {
         method: 'POST',
         headers: { 'x-auth-token': token },
         body: formData,
@@ -100,7 +100,7 @@ function ProjectDetail() {
       displayApiMessage('File uploaded successfully!', 'success');
       setFiles(prevFiles => [data, ...prevFiles]);
       setSelectedFile(null);
-      e.target.reset(); // Reset the form
+      e.target.reset();
     } catch (err) {
       displayApiMessage(err.message, 'error');
     }
@@ -113,7 +113,8 @@ function ProjectDetail() {
       return;
     }
     try {
-      const response = await fetch(`/api/projects/${projectId}/comments`, {
+      // FIX: Added API_URL to the fetch call
+      const response = await fetch(`${API_URL}/api/projects/${projectId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -133,7 +134,7 @@ function ProjectDetail() {
 
 
   if (isLoading) return <div>Loading project details...</div>;
-  if (error) return <div className="error-message">{error}</div>; // This will now be a specific error
+  if (error) return <div className="error-message">{error}</div>;
   if (!project) return <div>Project not found.</div>;
 
   return (
@@ -164,7 +165,7 @@ function ProjectDetail() {
           <ul>
             {files.length > 0 ? files.map(file => (
               <li key={file._id} className="file-item">
-                <a href={`${process.env.REACT_APP_API_URL}${file.path}`} target="_blank" rel="noopener noreferrer">{file.originalName}</a>
+                <a href={`${API_URL}${file.path}`} target="_blank" rel="noopener noreferrer">{file.originalName}</a>
                 <div className="file-meta">
                   <span>{(file.size / 1024).toFixed(2)} KB</span>
                   <span>{new Date(file.createdAt).toLocaleDateString()}</span>
