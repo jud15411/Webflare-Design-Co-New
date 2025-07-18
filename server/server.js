@@ -1210,6 +1210,29 @@ app.put('/api/notifications/mark-read', authMiddleware, async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 
+app.post('/api/timeentries', auth, async (req, res) => {
+  const { hours, taskId, projectId } = req.body;
+
+  if (!hours || !taskId || !projectId) {
+    return res.status(400).json({ msg: 'Please provide hours, taskId, and projectId' });
+  }
+
+  try {
+    const newTimeEntry = new TimeEntry({
+      hours,
+      taskId,
+      projectId,
+      userId: req.user.id
+    });
+
+    const timeEntry = await newTimeEntry.save();
+    res.json(timeEntry);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 
 // --- Start Server ---
 app.listen(PORT, () => {
