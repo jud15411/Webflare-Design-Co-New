@@ -36,25 +36,48 @@ const TaskColumn = ({ title, tasks, onEdit }) => (
 
 function Tasks() {
   const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]); // For dropdown in add modal
+  const [users, setUsers] = useState([]); // For dropdown in add modal
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const token = localStorage.getItem('token');
   const API_URL = process.env.REACT_APP_API_URL;
 
-  // State for the modal
+  // State for the modals
+  const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [newTask, setNewTask] = useState({
+    title: '',
+    description: '',
+    projectId: '',
+    assignedTo: '',
+    dueDate: '',
+  });
 
-  const fetchTasks = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch(`${API_URL}/api/tasks`, {
-        headers: { 'x-auth-token': token },
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.msg || 'Failed to fetch tasks');
-      setTasks(data);
+      // Fetch tasks, projects, and users in parallel
+      const [tasksRes, projectsRes, usersRes] = await Promise.all([
+        fetch(`${API_URL}/api/tasks`, { headers: { 'x-auth-token': token } }),
+        fetch(`${API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
+        fetch(`${API_URL}/api/users`, { headers: { 'x-auth-token': token } })
+      ]);
+
+      if (!tasksRes.ok || !projectsRes.ok || !usersRes.ok) {
+        throw new Error('Failed to fetch all required data.');
+      }
+
+      const tasksData = await tasksRes.json();
+      const projectsData = await projectsRes.json();
+      const usersData = await usersRes.json();
+
+      setTasks(tasksData);
+      setProjects(projectsData);
+      setUsers(usersData);
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -63,22 +86,29 @@ function Tasks() {
   }, [token, API_URL]);
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    fetchData();
+  }, [fetchData]);
 
   const openEditModal = (task) => {
     setEditingTask(task);
     setShowEditModal(true);
   };
 
-  const closeEditModal = () => {
-    setEditingTask(null);
+  const closeModals = () => {
     setShowEditModal(false);
+    setEditingTask(null);
+    setShowAddModal(false);
+    setNewTask({ title: '', description: '', projectId: '', assignedTo: '', dueDate: '' });
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setEditingTask(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleNewTaskInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewTask(prev => ({ ...prev, [name]: value }));
   };
 
   const handleUpdateTask = async (e) => {
@@ -92,20 +122,34 @@ function Tasks() {
           'Content-Type': 'application/json',
           'x-auth-token': token,
         },
-        body: JSON.stringify({
-          title: editingTask.title,
-          description: editingTask.description,
-          status: editingTask.status,
-          // Add other fields you want to edit
-        }),
+        body: JSON.stringify(editingTask),
       });
-      if (!response.ok) {
-        throw new Error('Failed to update task.');
-      }
-      closeEditModal();
-      fetchTasks(); // Refetch tasks to update the board
+      if (!response.ok) throw new Error('Failed to update task.');
+      
+      closeModals();
+      fetchData(); // Refetch all data
     } catch (err) {
       setError(err.message || 'Error updating task.');
+    }
+  };
+
+  const handleAddTask = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${API_URL}/api/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token,
+        },
+        body: JSON.stringify(newTask),
+      });
+      if (!response.ok) throw new Error('Failed to add task.');
+      
+      closeModals();
+      fetchData(); // Refetch all data
+    } catch (err) {
+      setError(err.message || 'Error adding task.');
     }
   };
 
@@ -121,6 +165,7 @@ function Tasks() {
     <div className="tasks-page">
       <div className="page-header">
         <h1 className="page-title">Task Board</h1>
+        <button className="add-button" onClick={() => setShowAddModal(true)}>+ Add Task</button>
       </div>
 
       <div className="tasks-board">
@@ -134,12 +179,54 @@ function Tasks() {
         ))}
       </div>
 
+      {/* Add Task Modal */}
+      {showAddModal && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2 className="modal-title">Add New Task</h2>
+              <button className="close-button" onClick={closeModals}>&times;</button>
+            </div>
+            <form onSubmit={handleAddTask}>
+              <div className="form-group">
+                <label>Title</label>
+                <input type="text" name="title" value={newTask.title} onChange={handleNewTaskInputChange} required />
+              </div>
+               <div className="form-group">
+                <label>Description</label>
+                <textarea name="description" rows="3" value={newTask.description} onChange={handleNewTaskInputChange}></textarea>
+              </div>
+              <div className="form-group">
+                <label>Project</label>
+                <select name="projectId" value={newTask.projectId} onChange={handleNewTaskInputChange} required>
+                  <option value="">Select Project</option>
+                  {projects.map(p => <option key={p._id} value={p._id}>{p.title}</option>)}
+                </select>
+              </div>
+               <div className="form-group">
+                <label>Assign To</label>
+                <select name="assignedTo" value={newTask.assignedTo} onChange={handleNewTaskInputChange}>
+                  <option value="">Unassigned</option>
+                  {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Due Date</label>
+                <input type="date" name="dueDate" value={newTask.dueDate} onChange={handleNewTaskInputChange} />
+              </div>
+              <button type="submit" className="add-button">Create Task</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Task Modal */}
       {showEditModal && editingTask && (
         <div className="modal-backdrop">
           <div className="modal-content">
             <div className="modal-header">
               <h2 className="modal-title">Edit Task</h2>
-              <button className="close-button" onClick={closeEditModal}>&times;</button>
+              <button className="close-button" onClick={closeModals}>&times;</button>
             </div>
             <form onSubmit={handleUpdateTask}>
               <div className="form-group">
@@ -152,7 +239,6 @@ function Tasks() {
                   {columns.map(status => <option key={status} value={status}>{status}</option>)}
                 </select>
               </div>
-              {/* You can add more fields to edit here, like description */}
               <button type="submit" className="add-button">Update Task</button>
             </form>
           </div>
