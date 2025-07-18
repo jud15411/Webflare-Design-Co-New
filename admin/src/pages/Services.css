@@ -1,3 +1,12 @@
+/* admin/src/pages/Services.css */
+
+.services-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
 .services-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -24,7 +33,7 @@
   padding: 25px;
 }
 
-.service-card-title {
+.service-title {
   margin-top: 0;
   margin-bottom: 15px;
   color: #2c3e50;
@@ -32,14 +41,14 @@
   font-weight: 600;
 }
 
-.service-card-description {
+.service-description {
   color: #34495e;
   line-height: 1.6;
   font-size: 0.95rem;
-  white-space: pre-wrap;
+  white-space: pre-wrap; /* Respects line breaks in the description */
 }
 
-.service-card-actions {
+.service-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -48,58 +57,23 @@
   border-top: 1px solid #e9ecef;
 }
 
-.icon-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid #dfe6e9;
-  padding: 8px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: 500;
+/* Reusing button styles from Shared.css but can be customized here */
+.service-actions .edit-button, .service-actions .delete-button {
   font-size: 0.9rem;
-  transition: background-color 0.2s, border-color 0.2s;
-  background-color: #ffffff;
-  color: #2d3436;
+  padding: 8px 15px;
 }
 
-.icon-button:hover {
-  background-color: #fdfdfd;
-  border-color: #b2bec3;
-}
-
-.icon-button.delete-button {
-  border-color: #fab1a0;
-  color: #d63031;
-}
-
-.icon-button.delete-button:hover {
-  background-color: #fffaee;
-  border-color: #d63031;
-}
-
-.empty-state {
-  grid-column: 1 / -1;
+.no-data-message {
+  grid-column: 1 / -1; /* Span full width */
   text-align: center;
-  padding: 60px 30px;
-  background: #fff;
+  padding: 50px;
+  background-color: #fff;
   border-radius: 8px;
-  border: 2px dashed #e9ecef;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.07);
 }
 
-.empty-state h3 {
-  color: #34495e;
-  font-size: 1.4rem;
-  margin: 0;
-}
-
-.empty-state p {
-  color: #7f8c8d;
-  font-size: 1rem;
-  margin: 0;
-  max-width: 400px;
+.no-data-message p {
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  color: #6c757d;
 }

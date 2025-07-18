@@ -10,10 +10,10 @@ function Services() {
   // States for modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // New state for delete modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [editingService, setEditingService] = useState(null);
-  const [deletingServiceId, setDeletingServiceId] = useState(null); // State to hold the ID of the service to delete
+  const [deletingServiceId, setDeletingServiceId] = useState(null);
   const [newService, setNewService] = useState({ title: '', description: '' });
 
   const token = localStorage.getItem('token');
@@ -117,8 +117,10 @@ function Services() {
         {services.length > 0 ? (
           services.map(service => (
             <div key={service._id} className="service-card">
-              <h3 className="service-title">{service.title}</h3>
-              <p className="service-description">{service.description}</p>
+              <div className="service-card-content">
+                <h3 className="service-title">{service.title}</h3>
+                <p className="service-description">{service.description}</p>
+              </div>
               <div className="service-actions">
                 <button className="edit-button" onClick={() => openEditModal(service)}>Edit</button>
                 <button className="delete-button" onClick={() => openDeleteModal(service._id)}>Delete</button>
@@ -128,7 +130,6 @@ function Services() {
         ) : (
           <div className="no-data-message">
             <p>No services found. Try adding a new service to display here.</p>
-            <button className="add-button" onClick={() => setShowAddModal(true)}>+ Add Your First Service</button>
           </div>
         )}
       </div>
