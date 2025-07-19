@@ -3,322 +3,180 @@ import { useParams, Link } from 'react-router-dom';
 import './Shared.css';
 import './ProjectDetail.css';
 
-// Helper function for fetching data to reduce repetition
+const API_URL = process.env.REACT_APP_API_URL;
+
+// Helper to safely fetch data and handle errors
 async function fetchData(url, token) {
-  const response = await fetch(url, {
-    headers: { 'x-auth-token': token }
-  });
+  const response = await fetch(url, { headers: { 'x-auth-token': token } });
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ msg: 'An unknown error occurred.' }));
-    throw new Error(`Failed to fetch from ${url}: ${errorData.msg}`);
+    const errorData = await response.json().catch(() => ({ msg: `An unknown error occurred fetching from ${url}` }));
+    throw new Error(errorData.msg);
   }
   return response.json();
 }
 
-
 function ProjectDetail() {
   const { projectId } = useParams();
   const [project, setProject] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [apiMessage, setApiMessage] = useState('');
-  const [messageType, setMessageType] = useState('');
-
   const [milestones, setMilestones] = useState([]);
   const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
   const [files, setFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  
+  const [newComment, setNewComment] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
-  const [totalHours, setTotalHours] = useState(0);
-
-  const [showAddMilestoneModal, setShowAddMilestoneModal] = useState(false);
-  const [newMilestone, setNewMilestone] = useState({ name: '', description: '', dueDate: '' });
-
+  
   const token = localStorage.getItem('token');
-  const API_URL = process.env.REACT_APP_API_URL;
 
-  const loadProjectData = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
+  const fetchAllProjectData = useCallback(async () => {
+    // No need to set loading here, as the initial load is handled by the useEffect
     try {
-      const projectData = await fetchData(`${API_URL}/api/projects/${projectId}`, token);
+      const [projectData, milestonesData, commentsData, filesData] = await Promise.all([
+        fetchData(`${API_URL}/api/projects/${projectId}`, token),
+        fetchData(`${API_URL}/api/projects/${projectId}/milestones`, token),
+        fetchData(`${API_URL}/api/projects/${projectId}/comments`, token),
+        fetchData(`${API_URL}/api/projects/${projectId}/files`, token)
+      ]);
+      
       setProject(projectData);
-
-      const milestonesData = await fetchData(`${API_URL}/api/projects/${projectId}/milestones`, token);
       setMilestones(milestonesData);
-
-      const filesData = await fetchData(`${API_URL}/api/projects/${projectId}/files`, token);
+      setComments(commentsData);
       setFiles(filesData);
 
-      const commentsData = await fetchData(`${API_URL}/api/projects/${projectId}/comments`, token);
-      setComments(commentsData);
-      
-      const hoursData = await fetchData(`${API_URL}/api/projects/${projectId}/hours`, token);
-      setTotalHours(hoursData.totalHours || 0);
-
     } catch (err) {
-      console.error("Detailed Fetch Error:", err);
+      console.error("Failed to fetch project details:", err);
       setError(err.message);
-    } finally {
-      setIsLoading(false);
     }
-  }, [projectId, token, API_URL]);
+  }, [projectId, token]);
 
   useEffect(() => {
-    loadProjectData();
-  }, [loadProjectData]);
+    setIsLoading(true);
+    fetchAllProjectData().finally(() => setIsLoading(false));
+  }, [fetchAllProjectData]);
 
-  const displayApiMessage = (message, type) => {
-    setApiMessage(message);
-    setMessageType(type);
-    setTimeout(() => {
-      setApiMessage('');
-      setMessageType('');
-    }, 5000);
+  // Handle comment submission
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    try {
+      const response = await fetch(`${API_URL}/api/projects/${projectId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({ text: newComment }),
+      });
+      if (!response.ok) throw new Error('Failed to post comment.');
+      const postedComment = await response.json();
+      setComments([postedComment, ...comments]);
+      setNewComment('');
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
+  // Handle file selection
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
   };
 
-  const handleFileUpload = async (e) => {
-    e.preventDefault();
-    if (!selectedFile) {
-      displayApiMessage('Please select a file to upload.', 'error');
-      return;
-    }
+  // Handle file upload
+  const handleFileUpload = async () => {
+    if (!selectedFile) return;
     const formData = new FormData();
     formData.append('projectFile', selectedFile);
+
     try {
       const response = await fetch(`${API_URL}/api/projects/${projectId}/files`, {
         method: 'POST',
         headers: { 'x-auth-token': token },
         body: formData,
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.msg || 'File upload failed.');
-      displayApiMessage('File uploaded successfully!', 'success');
-      setFiles(prevFiles => [data, ...prevFiles]);
+      if (!response.ok) throw new Error('Failed to upload file.');
+      const uploadedFile = await response.json();
+      setFiles([uploadedFile, ...files]);
       setSelectedFile(null);
-      e.target.reset();
+      document.getElementById('file-input').value = null; // Clear file input
     } catch (err) {
-      displayApiMessage(err.message, 'error');
+      setError(err.message);
     }
   };
 
-  const handleCommentSubmit = async (e) => {
-    e.preventDefault();
-    if (!newComment.trim()) {
-      displayApiMessage('Comment cannot be empty.', 'error');
-      return;
-    }
-    try {
-      const response = await fetch(`${API_URL}/api/projects/${projectId}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-auth-token': token,
-        },
-        body: JSON.stringify({ text: newComment }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.msg || 'Failed to post comment.');
-      setComments(prevComments => [data, ...prevComments]);
-      setNewComment('');
-    } catch (err) {
-      displayApiMessage(err.message, 'error');
-    }
-  };
 
-  const handleMilestoneInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewMilestone(prev => ({ ...prev, [name]: value }));
-  };
+  if (isLoading) {
+    return <div className="loading-container">Loading Project Details...</div>;
+  }
 
-  const handleAddMilestone = async (e) => {
-    e.preventDefault();
-    try {
-        const response = await fetch(`${API_URL}/api/projects/${projectId}/milestones`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-auth-token': token,
-            },
-            body: JSON.stringify(newMilestone),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.msg || 'Failed to add milestone.');
-        setMilestones(prev => [...prev, data].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)));
-        setShowAddMilestoneModal(false);
-        setNewMilestone({ name: '', description: '', dueDate: '' });
-        displayApiMessage('Milestone added successfully!', 'success');
-    } catch (err) {
-        displayApiMessage(err.message, 'error');
-    }
-  };
-
-  // New handler for updating milestone status
-  const handleStatusChange = async (milestoneId, newStatus) => {
-    try {
-        const response = await fetch(`${API_URL}/api/milestones/${milestoneId}/status`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-auth-token': token,
-            },
-            body: JSON.stringify({ status: newStatus }),
-        });
-        const updatedMilestone = await response.json();
-        if (!response.ok) throw new Error(updatedMilestone.msg || 'Failed to update status.');
-
-        // Update the milestone in the local state
-        setMilestones(prev => prev.map(m => m._id === milestoneId ? updatedMilestone : m));
-        displayApiMessage('Status updated!', 'success');
-    } catch (err) {
-        displayApiMessage(err.message, 'error');
-    }
-  };
-
-  if (isLoading) return <div>Loading project details...</div>;
-  if (error) return <div className="error-message">{error}</div>;
-  if (!project) return <div>Project not found.</div>;
+  if (error) {
+    return (
+      <div className="error-container">
+        <h2>Failed to Load Project</h2>
+        <p>{error}</p>
+        <Link to="/projects" className="back-button">Go Back to Projects</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="project-detail-page">
       <Link to="/projects" className="back-button">← Back to Projects</Link>
-
+      
       <div className="page-header">
-        <h1 className="page-title">{project.title}</h1>
+        <h1 className="page-title">{project?.title || 'Project Title'}</h1>
       </div>
 
       <div className="project-meta-data">
-        <h3>Project Details</h3>
-        <p><strong>Client:</strong> {project.clientId ? project.clientId.name : 'N/A'}</p>
-        <p><strong>Status:</strong> {project.status}</p>
-        <p><strong>Total Hours Logged:</strong> {totalHours.toFixed(2)}</p>
-      </div>
-
-      <div className="milestone-section">
-        <h3>
-          Project Milestones
-          <button className="add-button" onClick={() => setShowAddMilestoneModal(true)}>+ Add Milestone</button>
-        </h3>
-        <div className="milestone-list">
-          {milestones.length > 0 ? milestones.map(milestone => (
-            <div key={milestone._id} className="milestone-item">
-              <div className="milestone-header">
-                <span className="milestone-name">{milestone.name}</span>
-                
-                {/* FIX: Replaced status text with a dropdown */}
-                <select
-                  className="milestone-status-select"
-                  value={milestone.status}
-                  onChange={(e) => handleStatusChange(milestone._id, e.target.value)}
-                >
-                  <option>Not Started</option>
-                  <option>In Progress</option>
-                  <option>On Hold</option>
-                  <option>Completed</option>
-                  <option>Canceled</option>
-                </select>
-
-              </div>
-              {milestone.description && <p className="milestone-description">{milestone.description}</p>}
-              {milestone.clientSuggestions && (
-                <div className="client-suggestion-box">
-                  <p className="suggestion-title">
-                    Client Suggestion
-                    {milestone.lastSuggestedBy && ` by ${milestone.lastSuggestedBy.name}`}
-                    {milestone.lastSuggestionDate && ` on ${new Date(milestone.lastSuggestionDate).toLocaleDateString()}`}
-                  </p>
-                  <p className="suggestion-text">{milestone.clientSuggestions}</p>
-                </div>
-              )}
-              <p className="milestone-due-date">
-                Due: {new Date(milestone.dueDate).toLocaleDateString()}
-              </p>
-            </div>
-          )) : <p>No milestones have been set for this project yet.</p>}
-        </div>
-      </div>
-
-      <div className="file-section">
-        <h3>Project Files</h3>
-        <form onSubmit={handleFileUpload} className="file-upload-form">
-          <div className="form-group">
-            <label htmlFor="file-upload">Upload New File</label>
-            <input id="file-upload" type="file" onChange={handleFileChange} />
-          </div>
-          <button type="submit" className="upload-button">Upload</button>
-        </form>
-        <div className="file-list">
-          <ul>
-            {files.length > 0 ? files.map(file => (
-              <li key={file._id} className="file-item">
-                <a href={`${API_URL}${file.path}`} target="_blank" rel="noopener noreferrer">{file.originalName}</a>
-                <div className="file-meta">
-                  <span>{(file.size / 1024).toFixed(2)} KB</span>
-                  <span>{new Date(file.createdAt).toLocaleDateString()}</span>
-                </div>
-              </li>
-            )) : <p>No files uploaded yet.</p>}
-          </ul>
-        </div>
-      </div>
-
-      <div className="comment-section">
-        <h3>Developer Comments</h3>
-        <form onSubmit={handleCommentSubmit} className="comment-form">
-          <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Add a new comment..."
-            rows="4"
-          />
-          <button type="submit">Post Comment</button>
-        </form>
-        <div className="comment-list">
-          {comments.length > 0 ? comments.map(comment => (
-            <div key={comment._id} className="comment-item">
-              <p className="comment-text">{comment.text}</p>
-              <p className="comment-meta">
-                by <strong>{comment.author ? comment.author.name : 'Unknown User'}</strong> on {new Date(comment.createdAt).toLocaleString()}
-              </p>
-            </div>
-          )) : <p>No comments yet.</p>}
-        </div>
+          <h3>Project Details</h3>
+          <p><strong>Status:</strong> <span className={`status status-${project?.status.toLowerCase()}`}>{project?.status}</span></p>
+          <p><strong>Client:</strong> {project?.clientId?.name || 'N/A'}</p>
+          <p><strong>Description:</strong> {project?.description || 'No description provided.'}</p>
       </div>
       
-      {apiMessage && <div className={`message-banner ${messageType}`}>{apiMessage}</div>}
+      {/* File Upload Section */}
+      <div className="file-section form-section">
+          <h3>Upload File</h3>
+          <input type="file" id="file-input" onChange={handleFileChange} />
+          <button onClick={handleFileUpload} disabled={!selectedFile}>Upload</button>
+      </div>
+      
+      {/* Files List */}
+      <div className="file-section">
+        <h3>Project Files</h3>
+        <ul className="file-list">
+            {files.length > 0 ? files.map(file => (
+                <li key={file._id}>
+                    <a href={`${API_URL}${file.path}`} target="_blank" rel="noopener noreferrer">{file.originalName}</a>
+                    <span>({(file.size / 1024).toFixed(2)} KB)</span>
+                </li>
+            )) : <p>No files uploaded yet.</p>}
+        </ul>
+      </div>
 
-      {showAddMilestoneModal && (
-        <div className="modal-backdrop">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2 className="modal-title">Add New Milestone</h2>
-              <button className="close-button" onClick={() => setShowAddMilestoneModal(false)}>&times;</button>
-            </div>
-            <form onSubmit={handleAddMilestone}>
-              <div className="form-group">
-                <label>Milestone Name</label>
-                <input type="text" name="name" value={newMilestone.name} onChange={handleMilestoneInputChange} required />
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea name="description" rows="3" value={newMilestone.description} onChange={handleMilestoneInputChange}></textarea>
-              </div>
-              <div className="form-group">
-                <label>Due Date</label>
-                <input type="date" name="dueDate" value={newMilestone.dueDate} onChange={handleMilestoneInputChange} required />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="cancel-button" onClick={() => setShowAddMilestoneModal(false)}>Cancel</button>
-                <button type="submit" className="submit-button">Add Milestone</button>
-              </div>
-            </form>
-          </div>
+      {/* Comment Submission Form */}
+      <div className="comment-section form-section">
+        <h3>Add a Comment</h3>
+        <form onSubmit={handleCommentSubmit}>
+            <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Write a comment..."
+            ></textarea>
+            <button type="submit">Post Comment</button>
+        </form>
+      </div>
+
+      {/* Comments List */}
+      <div className="comment-section">
+        <h3>Comments</h3>
+        <div className="comment-list">
+            {comments.length > 0 ? comments.map(comment => (
+                <div key={comment._id} className="comment-item">
+                    <p className="comment-author">{comment.author?.name || 'User'}</p>
+                    <p className="comment-text">{comment.text}</p>
+                    <p className="comment-date">{new Date(comment.createdAt).toLocaleString()}</p>
+                </div>
+            )) : <p>No comments yet.</p>}
         </div>
-      )}
+      </div>
     </div>
   );
 }
