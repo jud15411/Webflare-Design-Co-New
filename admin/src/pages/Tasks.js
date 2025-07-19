@@ -5,47 +5,6 @@ import './Tasks.css';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-// Task Card with Edit and the new Delete button
-const TaskCard = ({ task, onEdit, onDelete, currentUser }) => (
-    <div className="task-card">
-      <h4 className="task-card-title">{task.title}</h4>
-      <div className="task-card-meta">
-        <span className="project-title">{task.projectId?.title || 'No Project'}</span>
-        <div className="assignee-avatars">
-          {task.assignedTo && task.assignedTo.length > 0 ? (
-            task.assignedTo.map(user => (
-              <span key={user._id} className="assignee-avatar" title={user.name}>
-                {user.name.charAt(0).toUpperCase()}
-              </span>
-            ))
-          ) : (
-            <span className="assignee-avatar" title="Unassigned">?</span>
-          )}
-        </div>
-      </div>
-      <div className="task-card-actions">
-        {currentUser?.role === 'CEO' && (
-            <button className="delete-task-button" onClick={() => onDelete(task._id)}>🗑️</button>
-        )}
-        <button className="edit-task-button" onClick={() => onEdit(task)}>✏️</button>
-      </div>
-    </div>
-);
-
-// Task Column (No changes needed, but included for completeness)
-const TaskColumn = ({ title, tasks, onEdit, onDelete, currentUser }) => (
-    <div className="task-column">
-      <div className={`column-header ${title.replace(/\s+/g, '-').toLowerCase()}`}>
-        <h2 className="column-title">{title} ({tasks.length})</h2>
-      </div>
-      <div className="task-list">
-        {tasks.map(task => (
-          <TaskCard key={task._id} task={task} onEdit={onEdit} onDelete={onDelete} currentUser={currentUser} />
-        ))}
-      </div>
-    </div>
-);
-
 function Tasks() {
     const [tasks, setTasks] = useState([]);
     const [users, setUsers] = useState([]);
@@ -55,38 +14,39 @@ function Tasks() {
     const [error, setError] = useState('');
     const token = localStorage.getItem('token');
 
-    // Your existing modal and form states
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [editingTask, setEditingTask] = useState(null);
-    const [newTask, setNewTask] = useState({ title: '', description: '', status: 'Backlog', projectId: '', assignedTo: [] });
-    const [timeLog, setTimeLog] = useState('');
-    
-    const columns = ['Backlog', 'To Do', 'In Progress', 'Done'];
+    // State for the "Add Task" modal
+    const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+    const [newTask, setNewTask] = useState({
+        title: '',
+        description: '',
+        status: 'Backlog',
+        projectId: '',
+        assignedTo: []
+    });
 
-    const fetchData = useCallback(async () => {
+    const fetchPageData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [tasksRes, usersRes, projectsRes, currentUserRes] = await Promise.all([
+            const [tasksRes, userRes, usersRes, projectsRes] = await Promise.all([
                 fetch(`${API_URL}/api/tasks`, { headers: { 'x-auth-token': token } }),
+                fetch(`${API_URL}/api/auth/user`, { headers: { 'x-auth-token': token } }),
                 fetch(`${API_URL}/api/users`, { headers: { 'x-auth-token': token } }),
-                fetch(`${API_URL}/api/projects`, { headers: { 'x-auth-token': token } }),
-                fetch(`${API_URL}/api/auth/user`, { headers: { 'x-auth-token': token } })
+                fetch(`${API_URL}/api/projects`, { headers: { 'x-auth-token': token } })
             ]);
 
-            if (!tasksRes.ok || !usersRes.ok || !projectsRes.ok || !currentUserRes.ok) {
-                throw new Error('Failed to fetch page data.');
+            if (!tasksRes.ok || !userRes.ok || !usersRes.ok || !projectsRes.ok) {
+                throw new Error('Failed to fetch data. Please log in again.');
             }
             
             const tasksData = await tasksRes.json();
+            const userData = await userRes.json();
             const usersData = await usersRes.json();
             const projectsData = await projectsRes.json();
-            const currentUserData = await currentUserRes.json();
 
             setTasks(tasksData);
+            setCurrentUser(userData);
             setUsers(usersData);
             setProjects(projectsData);
-            setCurrentUser(currentUserData);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -95,27 +55,36 @@ function Tasks() {
     }, [token]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        fetchPageData();
+    }, [fetchPageData]);
+    
+    // --- THE FIX: These functions were missing ---
+    const handleNewTaskInputChange = (e) => {
+        const { name, value } = e.target;
+        setNewTask(prev => ({ ...prev, [name]: value }));
+    };
 
-    const handleInputChange = (e) => {
-        const { name, value, options } = e.target;
-        const targetState = showEditModal ? setEditingTask : setNewTask;
-        if (name === 'assignedTo') {
-            const selected = Array.from(options).filter(o => o.selected).map(o => o.value);
-            targetState(prev => ({ ...prev, [name]: selected }));
-        } else {
-            targetState(prev => ({ ...prev, [name]: value }));
+    const closeModals = () => {
+        setShowAddTaskModal(false);
+    };
+    // ---------------------------------------------
+
+    const handleNewTaskSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await fetch(`${API_URL}/api/tasks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+                body: JSON.stringify(newTask),
+            });
+            if (!response.ok) throw new Error('Failed to create task.');
+            closeModals(); // Close modal on success
+            fetchPageData(); // Refresh task list
+        } catch (err) {
+            setError(err.message);
         }
     };
-    
-    // --- Your Existing Add/Edit Task Handlers ---
-    const handleAddTask = async (e) => { e.preventDefault(); /* ... your existing logic ... */ };
-    const handleUpdateTask = async (e) => { e.preventDefault(); /* ... your existing logic ... */ };
-    const openEditModal = (task) => { setEditingTask(task); setShowEditModal(true); };
-    const handleCloseModals = () => { setShowAddModal(false); setShowEditModal(false); };
-    
-    // --- New Delete Task Handler ---
+
     const handleDeleteTask = async (taskId) => {
         if (!window.confirm('Are you sure you want to permanently delete this task?')) return;
         try {
@@ -123,12 +92,8 @@ function Tasks() {
                 method: 'DELETE',
                 headers: { 'x-auth-token': token }
             });
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.msg || 'Failed to delete task.');
-            }
-            // On success, remove the task from the local state for an instant UI update
-            setTasks(prevTasks => prevTasks.filter(task => task._id !== taskId));
+            if (!response.ok) throw new Error('Failed to delete task.');
+            fetchPageData(); // Refresh the task list
         } catch (err) {
             setError(err.message);
         }
@@ -140,102 +105,92 @@ function Tasks() {
     return (
         <div className="tasks-page">
             <div className="page-header">
-                <h1>Tasks Board</h1>
-                <button onClick={() => setShowAddModal(true)} className="add-button-small">+ Add New Task</button>
-            </div>
-            <div className="tasks-board">
-                {columns.map(column => (
-                    <TaskColumn
-                        key={column}
-                        title={column}
-                        tasks={tasks.filter(task => task.status === column)}
-                        onEdit={openEditModal}
-                        onDelete={handleDeleteTask}
-                        currentUser={currentUser}
-                    />
-                ))}
+                <h1>All Tasks</h1>
+                <button onClick={() => setShowAddTaskModal(true)} className="add-button-small">+ Add New Task</button>
             </div>
 
-            {/* Your Existing "Add Task" Modal JSX */}
-            {showAddModal && (
-              <div className="modal-backdrop">
-                <div className="modal-content">
-                  <div className="modal-header">
-                    <h2 className="modal-title">Add New Task</h2>
-                    <button className="close-button" onClick={closeModals}>&times;</button>
-                  </div>
-                  <form onSubmit={handleAddTask}>
-                    <div className="form-group">
-                      <label>Title</label>
-                      <input type="text" name="title" value={newTask.title} onChange={handleNewTaskInputChange} required />
-                    </div>
-                    <div className="form-group">
-                      <label>Description</label>
-                      <textarea name="description" rows="3" value={newTask.description} onChange={handleNewTaskInputChange}></textarea>
-                    </div>
-                    <div className="form-group">
-                      <label>Project</label>
-                      <select name="projectId" value={newTask.projectId} onChange={handleNewTaskInputChange} required>
-                        <option value="">Select Project</option>
-                        {projects.map(p => <option key={p._id} value={p._id}>{p.title}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Assign To</label>
-                      <select name="assignedTo" value={newTask.assignedTo} onChange={handleNewTaskInputChange} multiple>
-                        {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Due Date</label>
-                      <input type="date" name="dueDate" value={newTask.dueDate} onChange={handleNewTaskInputChange} />
-                    </div>
-                    <button type="submit" className="add-button">Create Task</button>
-                  </form>
-                </div>
-              </div>
-            )}
+            <div className="task-list-container">
+                <table className="tasks-table">
+                    <thead>
+                        <tr>
+                            <th>Task Title</th>
+                            <th>Project</th>
+                            <th>Assigned To</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {tasks.length > 0 ? tasks.map(task => (
+                            <tr key={task._id}>
+                                <td>{task.title}</td>
+                                <td>{task.projectId?.title || 'N/A'}</td>
+                                <td>{task.assignedTo?.name || 'Unassigned'}</td>
+                                <td><span className={`status status-${task.status.toLowerCase().replace(/\s+/g, '-')}`}>{task.status}</span></td>
+                                <td className="task-actions">
+                                    {currentUser?.role === 'CEO' && (
+                                        <button onClick={() => handleDeleteTask(task._id)} className="delete-button-small">
+                                            Delete
+                                        </button>
+                                    )}
+                                </td>
+                            </tr>
+                        )) : (
+                            <tr>
+                                <td colSpan="5" className="empty-table-cell">No tasks found.</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
-            {/* Edit Task Modal */}
-            {showEditModal && editingTask && (
-              <div className="modal-backdrop">
-                <div className="modal-content">
-                  <div className="modal-header">
-                    <h2 className="modal-title">Edit Task</h2>
-                    <button className="close-button" onClick={closeModals}>&times;</button>
-                  </div>
-                  <form onSubmit={handleUpdateTask}>
-                    <div className="form-group">
-                      <label>Title</label>
-                      <input type="text" name="title" value={editingTask.title} onChange={handleInputChange} required />
-                    </div>
-                    <div className="form-group">
-                      <label>Description</label>
-                      <textarea name="description" rows="3" value={editingTask.description || ''} onChange={handleInputChange}></textarea>
-                    </div>
-                    <div className="form-group">
-                      <label>Status</label>
-                      <select name="status" value={editingTask.status} onChange={handleInputChange}>
-                        {columns.map(status => <option key={status} value={status}>{status}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Assign To</label>
-                      <select name="assignedTo" value={editingTask.assignedTo} onChange={handleInputChange} multiple>
-                        {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group time-log-group">
-                        <label>Log Time</label>
-                        <div className="time-log-input-wrapper">
-                          <input type="number" name="timeLog" value={timeLog} onChange={(e) => setTimeLog(e.target.value)} placeholder="e.g., 2.5" />
-                          <span>hours</span>
+            {/* Add New Task Modal */}
+            {showAddTaskModal && (
+                <div className="modal-backdrop">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h2>Add New Task</h2>
+                            <button onClick={closeModals} className="close-button">&times;</button>
                         </div>
+                        <form onSubmit={handleNewTaskSubmit}>
+                            <div className="form-group">
+                                <label>Title</label>
+                                <input name="title" value={newTask.title} onChange={handleNewTaskInputChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Description</label>
+                                <textarea name="description" value={newTask.description} onChange={handleNewTaskInputChange}></textarea>
+                            </div>
+                            <div className="form-group">
+                                <label>Project</label>
+                                <select name="projectId" value={newTask.projectId} onChange={handleNewTaskInputChange} required>
+                                    <option value="">Select a Project</option>
+                                    {projects.map(p => <option key={p._id} value={p._id}>{p.title}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Assign To</label>
+                                <select name="assignedTo" value={newTask.assignedTo} onChange={handleNewTaskInputChange}>
+                                    <option value="">Unassigned</option>
+                                    {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Status</label>
+                                <select name="status" value={newTask.status} onChange={handleNewTaskInputChange}>
+                                    <option>Backlog</option>
+                                    <option>To Do</option>
+                                    <option>In Progress</option>
+                                    <option>Done</option>
+                                </select>
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" className="cancel-button" onClick={closeModals}>Cancel</button>
+                                <button type="submit" className="submit-button">Create Task</button>
+                            </div>
+                        </form>
                     </div>
-                    <button type="submit" className="add-button">Update Task</button>
-                  </form>
                 </div>
-              </div>
             )}
         </div>
     );
