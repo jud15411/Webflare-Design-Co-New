@@ -1,5 +1,6 @@
 const express = require('express');
-// **THE FIX:** Add { mergeParams: true } here as well for consistency.
+// **THE FIX:** Add { mergeParams: true } to the Router constructor.
+// This allows this router to access URL params from parent routers (e.g., :projectId).
 const router = express.Router({ mergeParams: true });
 const commentController = require('../controllers/commentController');
 const { authMiddleware, ownerOrAdminMiddleware } = require('../middleware/authMiddleware');
