@@ -1,7 +1,7 @@
+/* === MAIN DASHBOARD LAYOUT === */
 .dashboard-container {
   padding: 30px;
   background-color: #f4f7f6;
-  min-height: 100vh;
 }
 
 .dashboard-header {
@@ -14,6 +14,7 @@
 .page-title {
   color: #2c3e50;
   font-size: 2rem;
+  font-weight: 700;
   margin: 0;
 }
 
@@ -22,6 +23,7 @@
   font-size: 1rem;
 }
 
+/* === STATS CARDS === */
 .stats-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -35,7 +37,7 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   border: 1px solid #e8e8e8;
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card:hover {
@@ -57,13 +59,16 @@
   color: #2c3e50;
 }
 
+/* === CONTENT AREA (TABLES & LISTS) === */
 .dashboard-content {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 30px;
+  align-items: start;
 }
 
-.table-container {
+.table-container,
+.tasks-container {
   background-color: #ffffff;
   padding: 30px;
   border-radius: 8px;
@@ -77,6 +82,7 @@
   font-size: 1.2rem;
 }
 
+/* === PROJECTS TABLE === */
 .dashboard-table {
   width: 100%;
   border-collapse: collapse;
@@ -90,27 +96,58 @@
 }
 
 .dashboard-table th {
-  background-color: #f8f9fa;
   color: #7f8c8d;
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.dashboard-table td {
-  color: #34495e;
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
-/* General Loading and Error styles */
-.loading-container, .error-container {
+.clickable-row:hover {
+  background-color: #f8f9fa;
+}
+
+.empty-table-cell {
+  text-align: center;
+  padding: 40px;
+  color: #95a5a6;
+}
+
+/* === TASKS LIST === */
+.tasks-list {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 80vh;
-  font-size: 1.2rem;
-  color: #7f8c8d;
+  flex-direction: column;
+  gap: 15px;
 }
 
-.error-container {
-  color: #e74c3c;
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-radius: 5px;
+  border: 1px solid #ecf0f1;
+  border-left: 4px solid #3498db;
+}
+
+.task-info .task-title {
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 5px 0;
+}
+
+.task-info .task-project {
+  font-size: 0.85rem;
+  color: #7f8c8d;
+  margin: 0;
+}
+
+.empty-task-list p {
+  text-align: center;
+  padding: 20px;
+  color: #95a5a6;
 }

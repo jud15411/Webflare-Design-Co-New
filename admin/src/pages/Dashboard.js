@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
+import './Shared.css'; // A shared CSS file for common styles like status badges
 
-// The API URL is now dynamically set from your .env file
 const API_URL = process.env.REACT_APP_API_URL;
 
 function Dashboard() {
   const [stats, setStats] = useState(null);
+  const [recentProjects, setRecentProjects] = useState([]);
+  const [myTasks, setMyTasks] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -14,33 +17,34 @@ function Dashboard() {
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
     setError('');
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      navigate('/login');
+      return;
+    }
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
+      // We now make two separate, clear API calls
+      const [dashboardRes, userRes] = await Promise.all([
+        fetch(`${API_URL}/api/dashboard/stats`, { headers: { 'x-auth-token': token } }),
+        fetch(`${API_URL}/api/auth/user`, { headers: { 'x-auth-token': token } })
+      ]);
+
+      if (!dashboardRes.ok || !userRes.ok) {
+        throw new Error('Failed to load dashboard data. Your session may have expired.');
       }
 
-      // **THE FIX:** The fetch URL now uses the absolute path to your deployed backend.
-      const response = await fetch(`${API_URL}/api/dashboard/stats`, {
-        headers: {
-          'x-auth-token': token,
-          'Accept': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text(); // Get raw text to avoid JSON parse error
-        throw new Error(`Server responded with status ${response.status}: ${errorText.substring(0, 150)}...`);
-      }
-
-      const data = await response.json();
-      setStats(data);
+      const dashboardData = await dashboardRes.json();
+      const userData = await userRes.json();
+      
+      setStats(dashboardData.stats);
+      setRecentProjects(dashboardData.recentProjects || []);
+      setMyTasks(dashboardData.myTasks || []);
+      setCurrentUser(userData);
 
     } catch (err) {
       console.error("Dashboard Fetch Error:", err);
-      // Display the full error message for better debugging
       setError(err.message);
       localStorage.removeItem('token');
     } finally {
@@ -52,7 +56,10 @@ function Dashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Restart your React server after creating the .env file!
+  const getStatusClass = (status) => {
+    return status ? status.toLowerCase().replace(/\s+/g, '-') : '';
+  };
+
   if (isLoading) {
     return <div className="loading-container">Loading Dashboard...</div>;
   }
@@ -61,7 +68,7 @@ function Dashboard() {
     return (
       <div className="error-container">
         <h2>Failed to Load Dashboard</h2>
-        <p style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>{error}</p>
+        <p>{error}</p>
         <button onClick={() => navigate('/login')} className="login-button">
           Go to Login
         </button>
@@ -71,23 +78,82 @@ function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      <h1>Admin Dashboard</h1>
-      <div className="stats-grid">
-        <div className="stat-card">
-          <h2>Total Projects</h2>
+      <div className="dashboard-header">
+        <div>
+          <h1 className="page-title">Welcome, {currentUser?.name}!</h1>
+          <p className="current-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        </div>
+      </div>
+
+      <div className="stats-cards">
+        <div className="card">
+          <h3>Total Projects</h3>
           <p>{stats?.totalProjects ?? '0'}</p>
         </div>
-        <div className="stat-card">
-          <h2>Total Revenue</h2>
+        <div className="card">
+          <h3>Total Revenue</h3>
           <p>${(stats?.totalRevenue ?? 0).toLocaleString()}</p>
         </div>
-        <div className="stat-card">
-          <h2>Your Pending Tasks</h2>
+        <div className="card">
+          <h3>Your Pending Tasks</h3>
           <p>{stats?.pendingTasks ?? '0'}</p>
         </div>
-        <div className="stat-card">
-          <h2>Hours Logged Today</h2>
+        <div className="card">
+          <h3>Hours Logged Today</h3>
           <p>{stats?.hoursToday ?? '0'}</p>
+        </div>
+      </div>
+      
+      <div className="dashboard-content">
+        <div className="table-container">
+          <h2 className="table-title">Recent Projects</h2>
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Project Title</th>
+                <th>Client</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentProjects.length > 0 ? (
+                recentProjects.map(project => (
+                  <tr key={project._id} onClick={() => navigate(`/projects/${project._id}`)} className="clickable-row">
+                    <td>{project.title}</td>
+                    <td>{project.clientId?.name || 'N/A'}</td>
+                    <td>
+                      <span className={`status ${getStatusClass(project.status)}`}>{project.status}</span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="3" className="empty-table-cell">No recent projects to display.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="tasks-container">
+            <h2 className="table-title">My 5 Most Recent Tasks</h2>
+            <div className="tasks-list">
+                {myTasks.length > 0 ? (
+                    myTasks.map(task => (
+                        <div key={task._id} className="task-item">
+                            <div className="task-info">
+                                <p className="task-title">{task.title}</p>
+                                <p className="task-project">{task.projectId?.title || 'No Project'}</p>
+                            </div>
+                            <span className={`status ${getStatusClass(task.status)}`}>{task.status}</span>
+                        </div>
+                    ))
+                ) : (
+                    <div className="empty-task-list">
+                        <p>You have no open tasks. Great job! 🎉</p>
+                    </div>
+                )}
+            </div>
         </div>
       </div>
     </div>
