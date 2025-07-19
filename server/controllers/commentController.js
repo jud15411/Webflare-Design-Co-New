@@ -8,7 +8,6 @@ const Notification = require('../models/Notification');
 exports.getProjectComments = async (req, res) => {
     try {
         const { projectId } = req.params;
-        // Check that the projectId is being received correctly
         if (!projectId) {
             return res.status(400).json({ msg: 'Project ID is missing from the request.' });
         }
@@ -29,13 +28,16 @@ exports.createComment = async (req, res) => {
         const { text } = req.body;
         const { projectId } = req.params;
 
-        if (!text || !projectId) {
-            return res.status(400).json({ msg: 'Comment text and Project ID are required.' });
+        if (!text || !text.trim()) {
+            return res.status(400).json({ msg: 'Comment text cannot be empty.' });
+        }
+        if (!projectId) {
+            return res.status(400).json({ msg: 'Project ID is missing from the request.' });
         }
 
         const project = await Project.findById(projectId);
         if (!project) {
-            return res.status(404).json({ msg: 'Project not found' });
+            return res.status(404).json({ msg: 'Project not found.' });
         }
 
         const newComment = new Comment({
@@ -45,11 +47,7 @@ exports.createComment = async (req, res) => {
         });
         await newComment.save();
 
-        // Populate the author's details before sending the response
         const populatedComment = await Comment.findById(newComment._id).populate('author', 'name');
-        
-        // Notify users (optional, can be refined)
-        // ... your notification logic here ...
 
         res.status(201).json(populatedComment);
     } catch (err) {

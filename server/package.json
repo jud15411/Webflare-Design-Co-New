@@ -1,24 +1,23 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "Backend server for Webflare Design Co.",
+  "description": "Backend for Webflare Design Co. project management tool",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "build-all": "echo 'Starting full build process...' && cd ../client && echo 'Building client app...' && npm install && npm run build && echo 'Client build complete.' && cd ../admin && echo 'Building admin app...' && npm install && npm run build && echo 'Admin build complete.' && cd ../server && echo 'All builds finished.'",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "author": "Webflare",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.0",
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.1",
-    "multer": "^2.0.1",
-    "nodemailer": "^7.0.5",
-    "react-router-dom": "^7.7.0"
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.13"
   }
 }
