@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 
+// The API URL is now dynamically set from your .env file
+const API_URL = process.env.REACT_APP_API_URL;
+
 function Dashboard() {
   const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,36 +22,27 @@ function Dashboard() {
         return;
       }
 
-      const response = await fetch('/api/dashboard/stats', {
+      // **THE FIX:** The fetch URL now uses the absolute path to your deployed backend.
+      const response = await fetch(`${API_URL}/api/dashboard/stats`, {
         headers: {
           'x-auth-token': token,
-          'Accept': 'application/json', // Explicitly ask for JSON
+          'Accept': 'application/json',
         },
       });
 
-      // **ULTIMATE DIAGNOSTIC STEP:**
-      // Read the response as text first to see what we're actually getting.
-      const responseText = await response.text();
-
       if (!response.ok) {
-        // If the server sent an error status (4xx, 5xx), the text might be the error message.
-        throw new Error(`Server responded with status ${response.status}: ${responseText}`);
+        const errorText = await response.text(); // Get raw text to avoid JSON parse error
+        throw new Error(`Server responded with status ${response.status}: ${errorText.substring(0, 150)}...`);
       }
 
-      // Now, try to parse the text as JSON.
-      try {
-        const data = JSON.parse(responseText);
-        setStats(data);
-      } catch (e) {
-        // If parsing fails, it means the response was not JSON.
-        // We can now show the user exactly what was received.
-        throw new Error(`The server sent an invalid response that was not JSON. Response received: ${responseText.substring(0, 100)}...`);
-      }
+      const data = await response.json();
+      setStats(data);
 
     } catch (err) {
       console.error("Dashboard Fetch Error:", err);
+      // Display the full error message for better debugging
       setError(err.message);
-      localStorage.removeItem('token'); // It's safest to log out on any dashboard error.
+      localStorage.removeItem('token');
     } finally {
       setIsLoading(false);
     }
@@ -58,7 +52,7 @@ function Dashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-
+  // Restart your React server after creating the .env file!
   if (isLoading) {
     return <div className="loading-container">Loading Dashboard...</div>;
   }
@@ -67,7 +61,6 @@ function Dashboard() {
     return (
       <div className="error-container">
         <h2>Failed to Load Dashboard</h2>
-        {/* This will now display a much more useful error message */}
         <p style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>{error}</p>
         <button onClick={() => navigate('/login')} className="login-button">
           Go to Login
