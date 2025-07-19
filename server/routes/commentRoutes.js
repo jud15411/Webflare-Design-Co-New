@@ -1,5 +1,5 @@
 const express = require('express');
-// mergeParams allows us to access :projectId from the parent router (projectRoutes)
+// **THE FIX:** Add { mergeParams: true } here as well for consistency.
 const router = express.Router({ mergeParams: true });
 const commentController = require('../controllers/commentController');
 const { authMiddleware, ownerOrAdminMiddleware } = require('../middleware/authMiddleware');

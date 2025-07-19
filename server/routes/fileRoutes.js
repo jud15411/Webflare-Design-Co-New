@@ -1,6 +1,6 @@
 const express = require('express');
-// mergeParams allows us to access params from parent router (e.g., :projectId)
-const router = express.Router({ mergeParams: true }); 
+// **THE FIX:** Add { mergeParams: true } to the Router constructor.
+const router = express.Router({ mergeParams: true });
 const fileController = require('../controllers/fileController');
 const { authMiddleware, adminOnlyMiddleware, ownerOrAdminMiddleware } = require('../middleware/authMiddleware');
 const { uploadProjectFile } = require('../middleware/uploadMiddleware');
