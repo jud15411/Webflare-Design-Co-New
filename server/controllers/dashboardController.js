@@ -5,19 +5,17 @@ const TimeEntry = require('../models/TimeEntry');
 const mongoose = require('mongoose');
 
 exports.getDashboardStats = async (req, res) => {
-  // **CRITICAL FIX:** Wrap the entire function in a try...catch block.
-  // This ensures that if any of the database queries fail, we catch the error
-  // and send a proper JSON error response instead of crashing and sending HTML.
+  // **CRITICAL FIX:** The entire function is wrapped in a try...catch block.
   try {
+    // This ensures that an authenticated user is making the request.
+    if (!req.userId) {
+      return res.status(401).json({ msg: 'Authorization denied. No user ID.' });
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // This ensures req.userId exists, which is crucial for the queries below.
-    if (!req.userId) {
-        return res.status(401).json({ msg: 'Not authorized, no user ID found.' });
-    }
 
     const [
       totalProjects,
@@ -30,7 +28,7 @@ exports.getDashboardStats = async (req, res) => {
         { $match: { status: 'Paid' } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
-      // This query depends on a valid user ID from the auth token.
+      // Ensure the user ID is correctly cast for the query
       Task.countDocuments({ assignedTo: new mongoose.Types.ObjectId(req.userId), status: { $ne: 'Done' } }),
       TimeEntry.aggregate([
         { $match: { user: new mongoose.Types.ObjectId(req.userId), createdAt: { $gte: today, $lt: tomorrow } } },
@@ -41,7 +39,7 @@ exports.getDashboardStats = async (req, res) => {
     const totalRevenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
     const hoursToday = hoursTodayResult.length > 0 ? hoursTodayResult[0].total : 0;
 
-    // This is the successful JSON response.
+    // The successful JSON response
     res.json({
       totalProjects,
       totalRevenue,
@@ -50,8 +48,9 @@ exports.getDashboardStats = async (req, res) => {
     });
 
   } catch (err) {
-    // This is the JSON error response that will be sent if anything goes wrong.
-    console.error('💥 Dashboard Controller Error:', err.message);
-    res.status(500).json({ msg: 'Server error while fetching dashboard stats.', error: err.message });
+    // **THIS IS THE FIX:** If any error occurs above, this block runs.
+    // It sends a clean JSON error response instead of letting the server crash.
+    console.error('💥 DASHBOARD CONTROLLER ERROR:', err.message);
+    res.status(500).json({ msg: 'A server error occurred while fetching dashboard stats.', error: err.message });
   }
 };

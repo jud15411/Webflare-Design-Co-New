@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Dashboard.css'; // Assuming you have this CSS from a previous step
+import './Dashboard.css';
 
 function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -23,25 +23,25 @@ function Dashboard() {
         headers: { 'x-auth-token': token }
       });
 
-      // **CRITICAL FIX:** Check if the response was successful (status 200-299).
-      // If not, we can parse the JSON error message from our backend.
+      // **CRITICAL FIX:** First, check if the HTTP response itself is okay.
       if (!response.ok) {
-        // Try to get the error message from the backend, or use a default.
+        // If the response is not okay (e.g., status 401, 500),
+        // we try to read the JSON error body we created on the backend.
         const errorData = await response.json();
-        throw new Error(errorData.msg || `HTTP error! Status: ${response.status}`);
+        // We then throw an error with the specific message from the server.
+        throw new Error(errorData.msg || `Server responded with status: ${response.status}`);
       }
 
+      // Only if the response is okay do we parse the successful JSON data.
       const data = await response.json();
       setStats(data);
 
     } catch (err) {
-      // This will now catch both network errors and the specific errors we throw.
-      console.error("Dashboard Fetch Error:", err.message);
+      // This catch block now handles all errors cleanly.
+      console.error("Dashboard Fetch Error:", err);
       setError(err.message);
-      // It's good practice to clear a potentially bad token if something goes wrong
-      if (err.message.includes('HTTP error')) {
-        localStorage.removeItem('token');
-      }
+      // If an auth error or server error occurs, it's safest to log the user out.
+      localStorage.removeItem('token');
     } finally {
       setIsLoading(false);
     }
@@ -55,8 +55,8 @@ function Dashboard() {
     return <div className="loading-container">Loading Dashboard...</div>;
   }
 
-  // This will now display a much more helpful error message on the UI.
   if (error) {
+    // The UI now displays a helpful error message and a clear next step.
     return (
         <div className="error-container">
             <h2>Failed to Load Dashboard</h2>
