@@ -20,28 +20,35 @@ function Dashboard() {
       }
 
       const response = await fetch('/api/dashboard/stats', {
-        headers: { 'x-auth-token': token }
+        headers: {
+          'x-auth-token': token,
+          'Accept': 'application/json', // Explicitly ask for JSON
+        },
       });
 
-      // **CRITICAL FIX:** First, check if the HTTP response itself is okay.
+      // **ULTIMATE DIAGNOSTIC STEP:**
+      // Read the response as text first to see what we're actually getting.
+      const responseText = await response.text();
+
       if (!response.ok) {
-        // If the response is not okay (e.g., status 401, 500),
-        // we try to read the JSON error body we created on the backend.
-        const errorData = await response.json();
-        // We then throw an error with the specific message from the server.
-        throw new Error(errorData.msg || `Server responded with status: ${response.status}`);
+        // If the server sent an error status (4xx, 5xx), the text might be the error message.
+        throw new Error(`Server responded with status ${response.status}: ${responseText}`);
       }
 
-      // Only if the response is okay do we parse the successful JSON data.
-      const data = await response.json();
-      setStats(data);
+      // Now, try to parse the text as JSON.
+      try {
+        const data = JSON.parse(responseText);
+        setStats(data);
+      } catch (e) {
+        // If parsing fails, it means the response was not JSON.
+        // We can now show the user exactly what was received.
+        throw new Error(`The server sent an invalid response that was not JSON. Response received: ${responseText.substring(0, 100)}...`);
+      }
 
     } catch (err) {
-      // This catch block now handles all errors cleanly.
       console.error("Dashboard Fetch Error:", err);
       setError(err.message);
-      // If an auth error or server error occurs, it's safest to log the user out.
-      localStorage.removeItem('token');
+      localStorage.removeItem('token'); // It's safest to log out on any dashboard error.
     } finally {
       setIsLoading(false);
     }
@@ -51,20 +58,21 @@ function Dashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
+
   if (isLoading) {
     return <div className="loading-container">Loading Dashboard...</div>;
   }
 
   if (error) {
-    // The UI now displays a helpful error message and a clear next step.
     return (
-        <div className="error-container">
-            <h2>Failed to Load Dashboard</h2>
-            <p>{error}</p>
-            <button onClick={() => navigate('/login')} className="login-button">
-                Go to Login
-            </button>
-        </div>
+      <div className="error-container">
+        <h2>Failed to Load Dashboard</h2>
+        {/* This will now display a much more useful error message */}
+        <p style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>{error}</p>
+        <button onClick={() => navigate('/login')} className="login-button">
+          Go to Login
+        </button>
+      </div>
     );
   }
 
