@@ -177,3 +177,47 @@
     margin: 0;
     color: #34495e;
 }
+.milestone-item, .file-item, .comment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.milestone-description {
+    font-size: 0.9rem;
+    color: #b0b0b0;
+    margin-top: 5px;
+}
+
+.milestone-status-select {
+    background-color: #333;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-position: right 10px center;
+    background-repeat: no-repeat;
+    padding-right: 30px;
+}
+
+.delete-button-small {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    flex-shrink: 0; /* Prevents the button from shrinking */
+}
+
+.delete-button-small:hover {
+    background-color: #c82333;
+}

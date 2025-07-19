@@ -1,57 +1,47 @@
 const Comment = require('../models/Comment');
 const Project = require('../models/Project');
-const User = require('../models/User');
-const Notification = require('../models/Notification');
 
 // @desc    Get all comments for a project
-// @route   GET /api/projects/:projectId/comments
 exports.getProjectComments = async (req, res) => {
     try {
         const { projectId } = req.params;
-        if (!projectId) {
-            return res.status(400).json({ msg: 'Project ID is missing from the request.' });
-        }
-        const comments = await Comment.find({ project: projectId })
-            .sort({ createdAt: -1 })
-            .populate('author', 'name');
+        if (!projectId) return res.status(400).json({ msg: 'Project ID is required.' });
+        const comments = await Comment.find({ project: projectId }).sort({ createdAt: -1 }).populate('author', 'name');
         res.json(comments);
     } catch (err) {
-        console.error('Error fetching comments:', err);
-        res.status(500).json({ msg: 'Server error while fetching comments.' });
+        res.status(500).json({ msg: 'Server Error' });
     }
 };
 
 // @desc    Create a comment on a project
-// @route   POST /api/projects/:projectId/comments
 exports.createComment = async (req, res) => {
     try {
-        const { text } = req.body;
-        const { projectId } = req.params;
-
-        if (!text || !text.trim()) {
-            return res.status(400).json({ msg: 'Comment text cannot be empty.' });
-        }
-        if (!projectId) {
-            return res.status(400).json({ msg: 'Project ID is missing from the request.' });
-        }
-
-        const project = await Project.findById(projectId);
-        if (!project) {
-            return res.status(404).json({ msg: 'Project not found.' });
-        }
-
         const newComment = new Comment({
-            text,
+            text: req.body.text,
             author: req.userId,
-            project: projectId
+            project: req.params.projectId
         });
         await newComment.save();
-
         const populatedComment = await Comment.findById(newComment._id).populate('author', 'name');
-
         res.status(201).json(populatedComment);
     } catch (err) {
-        console.error('Error creating comment:', err);
-        res.status(500).send({ msg: 'Server error while creating comment.' });
+        res.status(500).json({ msg: 'Server Error' });
+    }
+};
+
+// @desc    Delete a project comment
+// @route   DELETE /api/projects/:projectId/comments/:commentId
+exports.deleteComment = async (req, res) => {
+    try {
+        const comment = await Comment.findById(req.params.commentId);
+        if (!comment) {
+            return res.status(404).json({ msg: 'Comment not found.' });
+        }
+        // Optional: Check if user is the author or an admin
+        await Comment.findByIdAndDelete(req.params.commentId);
+        res.json({ msg: 'Comment deleted successfully.' });
+    } catch (err) {
+        console.error('Error deleting comment:', err);
+        res.status(500).json({ msg: 'Server error while deleting comment.' });
     }
 };

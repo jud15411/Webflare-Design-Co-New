@@ -1,65 +1,43 @@
 const Milestone = require('../models/Milestone');
 
-// @desc    Get all milestones for a project
-// @route   GET /api/projects/:projectId/milestones
-// @access  Authenticated
-exports.getProjectMilestones = async (req, res) => {
-    try {
-        const milestones = await Milestone.find({ projectId: req.params.projectId })
-            .populate('lastSuggestedBy', 'name')
-            .sort({ dueDate: 1 });
-        res.json(milestones);
-    } catch (err) {
-        res.status(500).json({ msg: 'Server Error fetching milestones.' });
-    }
-};
-
 // @desc    Create a milestone for a project
-// @route   POST /api/projects/:projectId/milestones
-// @access  Admin
-exports.createProjectMilestone = async (req, res) => {
+exports.createMilestone = async (req, res) => {
     try {
-        const { name, description, dueDate } = req.body;
-        const { projectId } = req.params;
-        if (!name || !dueDate) {
-            return res.status(400).json({ msg: 'Name and due date are required.' });
-        }
         const newMilestone = new Milestone({
-            name, description, dueDate, projectId, status: 'Not Started'
+            ...req.body,
+            projectId: req.params.projectId
         });
         await newMilestone.save();
         res.status(201).json(newMilestone);
     } catch (err) {
-        res.status(500).json({ msg: 'Server Error adding milestone.' });
+        res.status(500).json({ msg: 'Server Error' });
     }
 };
 
-// @desc    Update milestone status
-// @route   PUT /api/milestones/:id/status
-// @access  Admin
+// @desc    Update a milestone's status
+// @route   PUT /api/milestones/:milestoneId/status
 exports.updateMilestoneStatus = async (req, res) => {
     try {
+        const { milestoneId } = req.params;
         const { status } = req.body;
-        const { id } = req.params;
-        const allowed = ['Not Started', 'In Progress', 'Completed', 'On Hold', 'Canceled'];
-        if (!allowed.includes(status)) {
-            return res.status(400).json({ msg: 'Invalid status value.' });
+        const validStatuses = ['Not Started', 'In Progress', 'Completed', 'On Hold', 'Canceled'];
+        
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ msg: 'Invalid status provided.' });
         }
-        const update = { status };
-        if (status === 'Completed') {
-            update.completionDate = new Date();
-        } else {
-            update.$unset = { completionDate: 1 };
-        }
-        const updatedMilestone = await Milestone.findByIdAndUpdate(id, update, { new: true })
-            .populate('lastSuggestedBy', 'name');
-
-        if (!updatedMilestone) {
+        
+        const milestone = await Milestone.findById(milestoneId);
+        if (!milestone) {
             return res.status(404).json({ msg: 'Milestone not found.' });
         }
-        res.json(updatedMilestone);
+
+        milestone.status = status;
+        milestone.completionDate = status === 'Completed' ? new Date() : null;
+
+        await milestone.save();
+        res.json(milestone);
     } catch (err) {
-        res.status(500).json({ msg: 'Server error updating milestone status.' });
+        console.error('Error updating milestone status:', err);
+        res.status(500).json({ msg: 'Server error while updating status.' });
     }
 };
-// ... (Add other milestone functions: updateMilestone, deleteMilestone, etc.)
