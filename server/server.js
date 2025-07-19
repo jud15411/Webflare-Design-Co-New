@@ -8,14 +8,20 @@ const connectDB = require('./config/db');
 const app = express();
 connectDB();
 
-// Core Middleware
+// === Core Middleware ===
 app.use(cors());
 app.use(express.json());
-app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // =================================================================
-// ## 1. API ROUTES (MUST COME FIRST) ##
+// ## THE FIX: SERVE STATIC FILES FIRST ##
+// This line must come BEFORE the API routes and especially before
+// the frontend static routes to ensure that any request for a file
+// in the /public directory is handled here.
 // =================================================================
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
+
+// === API Routes ===
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/projects', require('./routes/projectRoutes'));
@@ -27,24 +33,19 @@ app.use('/api/contracts', require('./routes/contractRoutes'));
 app.use('/api/services', require('./routes/serviceRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
-app.use('/api/dashboard', require('./routes/dashboardRoutes')); // Ensure dashboard route is included
-// Nested File and Comment routes
-app.use('/api/projects', require('./routes/fileRoutes'));
-app.use('/api/projects', require('./routes/commentRoutes'));
+app.use('/api/dashboard', require('./routes/dashboardRoutes'));
+// Note: Nested routes are handled within projectRoutes.js
 
 
-// =================================================================
-// ## 2. SERVE FRONTEND STATIC FILES (FOR PRODUCTION) ##
-// This section must come AFTER all API routes.
-// =================================================================
+// === Serve Frontend Static Files (for Production) ===
 if (process.env.NODE_ENV === 'production') {
-    // Serve the 'admin' frontend build
+    // Serve the 'admin' frontend build for any path starting with /admin
     app.use('/admin', express.static(path.join(__dirname, '../admin/build')));
     app.get('/admin/*', (req, res) => {
         res.sendFile(path.resolve(__dirname, '../admin', 'build', 'index.html'));
     });
 
-    // Serve the 'client' frontend build
+    // Serve the 'client' frontend build for all other routes
     app.use(express.static(path.join(__dirname, '../client/build')));
     app.get('*', (req, res) => {
         res.sendFile(path.resolve(__dirname, '../client', 'build', 'index.html'));
