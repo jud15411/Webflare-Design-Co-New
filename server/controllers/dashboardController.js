@@ -4,51 +4,54 @@ const Invoice = require('../models/Invoice');
 const TimeEntry = require('../models/TimeEntry');
 const mongoose = require('mongoose');
 
-// @desc    Get dashboard stats
-// @route   GET /api/dashboard/stats
-// @access  Authenticated
 exports.getDashboardStats = async (req, res) => {
-    try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+  // **CRITICAL FIX:** Wrap the entire function in a try...catch block.
+  // This ensures that if any of the database queries fail, we catch the error
+  // and send a proper JSON error response instead of crashing and sending HTML.
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-        const [
-            totalProjects, // STAT 1: Total number of all projects
-            revenueResult,   // STAT 2: Total revenue from 'Paid' invoices
-            pendingTasks,    // STAT 3: Pending tasks for the logged-in user
-            hoursTodayResult // STAT 4: Hours logged today by the user
-        ] = await Promise.all([
-            Project.countDocuments(), // Gets the count of all documents in the Project collection
-            
-            Invoice.aggregate([      // Calculates the sum of amounts for all 'Paid' invoices
-                { $match: { status: 'Paid' } },
-                { $group: { _id: null, total: { $sum: '$amount' } } }
-            ]),
-            
-            Task.countDocuments({ assignedTo: req.userId, status: { $ne: 'Done' } }),
-
-            TimeEntry.aggregate([
-                { $match: { user: new mongoose.Types.ObjectId(req.userId), createdAt: { $gte: today, $lt: tomorrow } } },
-                { $group: { _id: null, total: { $sum: '$hours' } } }
-            ])
-        ]);
-
-        // Process the results from the aggregation queries
-        const totalRevenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
-        const hoursToday = hoursTodayResult.length > 0 ? hoursTodayResult[0].total : 0;
-        
-        // Send all stats in the JSON response
-        res.json({
-            totalProjects,
-            totalRevenue,
-            pendingTasks,
-            hoursToday
-        });
-
-    } catch (err) {
-        console.error('Error fetching dashboard stats:', err);
-        res.status(500).send('Server Error');
+    // This ensures req.userId exists, which is crucial for the queries below.
+    if (!req.userId) {
+        return res.status(401).json({ msg: 'Not authorized, no user ID found.' });
     }
+
+    const [
+      totalProjects,
+      revenueResult,
+      pendingTasks,
+      hoursTodayResult
+    ] = await Promise.all([
+      Project.countDocuments(),
+      Invoice.aggregate([
+        { $match: { status: 'Paid' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      // This query depends on a valid user ID from the auth token.
+      Task.countDocuments({ assignedTo: new mongoose.Types.ObjectId(req.userId), status: { $ne: 'Done' } }),
+      TimeEntry.aggregate([
+        { $match: { user: new mongoose.Types.ObjectId(req.userId), createdAt: { $gte: today, $lt: tomorrow } } },
+        { $group: { _id: null, total: { $sum: '$hours' } } }
+      ])
+    ]);
+
+    const totalRevenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
+    const hoursToday = hoursTodayResult.length > 0 ? hoursTodayResult[0].total : 0;
+
+    // This is the successful JSON response.
+    res.json({
+      totalProjects,
+      totalRevenue,
+      pendingTasks,
+      hoursToday
+    });
+
+  } catch (err) {
+    // This is the JSON error response that will be sent if anything goes wrong.
+    console.error('💥 Dashboard Controller Error:', err.message);
+    res.status(500).json({ msg: 'Server error while fetching dashboard stats.', error: err.message });
+  }
 };
