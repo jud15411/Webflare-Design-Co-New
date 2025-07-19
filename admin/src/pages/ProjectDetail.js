@@ -13,6 +13,7 @@ function ProjectDetail() {
     const [error, setError] = useState('');
     const [apiMessage, setApiMessage] = useState({ text: '', type: '' });
 
+    // State for forms
     const [newComment, setNewComment] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
     const [showAddMilestoneModal, setShowAddMilestoneModal] = useState(false);
@@ -20,13 +21,16 @@ function ProjectDetail() {
     
     const token = localStorage.getItem('token');
 
+    // --- Data Fetching ---
     const fetchAllProjectData = useCallback(async () => {
         try {
             const [projectDetailsRes, currentUserRes] = await Promise.all([
                 fetch(`${API_URL}/api/projects/${projectId}/details`, { headers: { 'x-auth-token': token } }),
                 fetch(`${API_URL}/api/auth/user`, { headers: { 'x-auth-token': token } })
             ]);
-            if (!projectDetailsRes.ok || !currentUserRes.ok) throw new Error('Failed to load project data.');
+            if (!projectDetailsRes.ok || !currentUserRes.ok) {
+                throw new Error('Failed to load project data. Your session may have expired.');
+            }
             const detailsData = await projectDetailsRes.json();
             const userData = await currentUserRes.json();
             setProjectData(detailsData);
@@ -46,6 +50,13 @@ function ProjectDetail() {
         setTimeout(() => setApiMessage({ text: '', type: '' }), 4000);
     };
 
+    // --- THE FIX: This function was missing ---
+    const handleMilestoneInputChange = (e) => {
+        const { name, value } = e.target;
+        setNewMilestone(prev => ({ ...prev, [name]: value }));
+    };
+
+    // --- All Other Handlers ---
     const handleMilestoneStatusChange = async (milestoneId, newStatus) => {
         try {
             const res = await fetch(`${API_URL}/api/milestones/${milestoneId}/status`, {
