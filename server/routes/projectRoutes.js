@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const projectController = require('../controllers/projectController');
+// Correctly import the middleware
 const { authMiddleware, adminOnlyMiddleware } = require('../middleware/authMiddleware');
 const { uploadProjectImage } = require('../middleware/uploadMiddleware');
 
@@ -11,21 +12,19 @@ const commentRoutes = require('./commentRoutes');
 // === Main Project Routes ===
 router.route('/')
     .get(authMiddleware, adminOnlyMiddleware, projectController.getAllProjects)
-    .post(authMiddleware, adminOnlyMiddlware, uploadProjectImage, projectController.createProject);
+    // **THE FIX:** The typo "adminOnlyMiddlware" has been corrected to "adminOnlyMiddleware"
+    .post(authMiddleware, adminOnlyMiddleware, uploadProjectImage, projectController.createProject);
 
 router.route('/:id')
     .get(authMiddleware, projectController.getProjectById)
     .delete(authMiddleware, adminOnlyMiddleware, projectController.deleteProject);
 
 router.put('/:id/toggle-feature', authMiddleware, adminOnlyMiddleware, projectController.toggleProjectFeature);
-router.get('/:id/hours', authMiddleware, projectController.getProjectHours); // Corrected from :projectId to :id to match convention
-router.get('/featured', projectController.getFeaturedProjects); // Public route, should not have auth middleware if truly public
+router.get('/:id/hours', authMiddleware, projectController.getProjectHours);
+router.get('/featured', projectController.getFeaturedProjects);
 
-// =================================================================
-// ## THE FIX: REGISTER NESTED ROUTES ##
-// This tells the project router that any request to /:projectId/...
-// should be handled by the corresponding child router.
-// =================================================================
+// === Register Nested Routes ===
+// This correctly forwards requests for files and comments to their respective routers
 router.use('/:projectId', fileRoutes);
 router.use('/:projectId', commentRoutes);
 
