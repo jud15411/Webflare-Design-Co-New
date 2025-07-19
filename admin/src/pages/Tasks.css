@@ -163,3 +163,51 @@
     color: #aaa;
     font-style: italic;
 }
+.tasks-page {
+    padding: 30px;
+}
+
+.tasks-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.tasks-table th,
+.tasks-table td {
+    padding: 15px 20px;
+    text-align: left;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.tasks-table th {
+    background-color: #f8f9fa;
+    color: #7f8c8d;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.task-actions {
+    text-align: center;
+}
+
+/* This re-uses the delete button style from ProjectDetail.css,
+   but it's good to have it here for completeness. */
+.delete-button-small {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.delete-button-small:hover {
+    background-color: #c0392b;
+}
