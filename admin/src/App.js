@@ -52,7 +52,7 @@ function App() {
 
   return (
     <Router>
-      <div className="App">
+      <div className="app-layout">
         {/* Conditionally render the Sidebar */}
         {isAuthenticated && <Sidebar handleLogout={handleLogout} />}
         
