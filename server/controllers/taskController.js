@@ -12,7 +12,6 @@ exports.getTasks = async (req, res) => {
         const tasks = await Task.find(query).populate('projectId', 'title').populate('assignedTo', 'name');
         res.json(tasks);
     } catch (err) {
-        console.error('Error fetching tasks:', err);
         res.status(500).send('Server Error');
     }
 };
@@ -51,32 +50,18 @@ exports.createTask = async (req, res) => {
         }
         res.status(201).json(task);
     } catch (err) {
-        console.error('Error creating task:', err);
         res.status(500).send('Server Error');
     }
 };
 
 // @desc    Update a task
-// @route   PUT /api/tasks/:id
 exports.updateTask = async (req, res) => {
     try {
-        const { id } = req.params;
-        const updatedData = req.body;
-
-        // Ensure assignedTo is null if an empty string is passed
-        if (updatedData.assignedTo === '') {
-            updatedData.assignedTo = null;
-        }
-
-        const task = await Task.findByIdAndUpdate(id, updatedData, { new: true });
-
-        if (!task) {
-            return res.status(404).json({ msg: 'Task not found' });
-        }
+        const task = await Task.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!task) return res.status(404).json({ msg: 'Task not found' });
         res.json(task);
     } catch (err) {
-        console.error('Error updating task:', err);
-        res.status(500).send('Server error');
+        res.status(500).send('Server Error');
     }
 };
 
@@ -86,21 +71,23 @@ exports.updateTaskStatus = async (req, res) => {
         const { status } = req.body;
         const task = await Task.findByIdAndUpdate(req.params.id, { status }, { new: true });
         if (!task) return res.status(404).json({ msg: 'Task not found' });
-        // Handle notifications if needed
+        // ... (notification logic)
         res.json(task);
     } catch (err) {
-        console.error('Error updating task status:', err);
         res.status(500).send('Server Error');
     }
 };
 
 // @desc    Delete a task
+// @route   DELETE /api/tasks/:id
+// @access  CEO Only
 exports.deleteTask = async (req, res) => {
     try {
         const task = await Task.findById(req.params.id);
         if (!task) {
             return res.status(404).json({ msg: 'Task not found.' });
         }
+        // Also delete any time entries associated with the task
         await TimeEntry.deleteMany({ taskId: req.params.id });
         await Task.findByIdAndDelete(req.params.id);
         res.json({ msg: 'Task and associated time entries deleted successfully.' });
