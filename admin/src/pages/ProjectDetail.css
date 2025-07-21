@@ -1,223 +1,169 @@
+/* === Main Page Layout === */
 .project-detail-page {
-    padding: 30px;
-    max-width: 960px;
-    margin: 0 auto;
+  padding: 30px;
+  background-color: #f4f7f6;
+  min-height: 100vh;
 }
 
 .back-button {
-    display: inline-block;
-    margin-bottom: 20px;
-    color: #555;
-    text-decoration: none;
-    font-weight: 600;
+  display: inline-block;
+  margin-bottom: 25px;
+  color: #5a6a7b;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
 }
+
 .back-button:hover {
-    color: #007bff;
+  color: #007bff;
 }
 
+/* === Header Section === */
 .page-header {
-    text-align: center;
-    margin-bottom: 20px;
-}
-.page-header .page-title {
-    font-size: 2.8rem;
-    margin: 0;
-    color: #2c3e50;
-}
-.page-header p {
-    margin: 5px 0;
-    color: #7f8c8d;
+  text-align: left;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 20px;
 }
 
-.project-description {
-    background-color: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 30px;
-    line-height: 1.6;
-    color: #34495e;
-    text-align: center;
+.page-title {
+  font-size: 2.5rem;
+  color: #2c3e50;
+  margin: 0;
+  line-height: 1.2;
 }
 
+/* === Project Meta & Description === */
+.project-meta-data {
+  background-color: #ffffff;
+  padding: 25px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.project-meta-data p {
+  margin: 0 0 10px 0;
+  color: #34495e;
+}
+.project-meta-data p:last-child {
+  margin-bottom: 0;
+}
+.project-meta-data strong {
+  color: #2c3e50;
+}
+
+/* === Main Content Grid === */
+.project-content-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 30px;
+  align-items: start;
+}
+
+/* === Generic Detail Section Styling === */
 .detail-section {
-    background-color: #ffffff;
-    padding: 25px;
-    border-radius: 8px;
-    margin-bottom: 25px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #ecf0f1;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
+
 .section-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: #34495e;
+  margin: 0;
+  font-size: 1.4rem;
+  color: #34495e;
 }
 
-.add-button-small {
-    background-color: #28a745;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 5px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-.add-button-small:hover {
-    background-color: #218838;
+/* === Milestones, Files, Comments Lists === */
+.milestone-list, .file-list, .comment-list {
+  list-style: none;
+  padding: 0;
 }
 
-/* Milestone List */
-.milestone-list .milestone-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 0;
-    border-bottom: 1px solid #ecf0f1;
+.milestone-item, .file-item, .comment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #ecf0f1;
 }
-.milestone-list .milestone-item:last-child {
+.milestone-item:last-child, .file-item:last-child {
     border-bottom: none;
 }
-.milestone-item p {
+
+.milestone-info p, .file-info p, .comment-info p {
     margin: 0;
 }
 
-/* File List & Upload */
-.file-upload-form {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-.file-upload-form input[type="file"] {
-    flex-grow: 1;
-}
-.upload-button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-}
-.upload-button:disabled {
-    background-color: #a9a9a9;
-    cursor: not-allowed;
+.file-list a, .file-list span {
+    font-size: 0.9rem;
 }
 
-.file-list {
-    list-style: none;
-    padding: 0;
-}
-.file-list li {
-    padding: 10px 0;
-    border-bottom: 1px solid #ecf0f1;
-}
-.file-list a {
-    color: #007bff;
-    text-decoration: none;
-}
-.file-list a:hover {
-    text-decoration: underline;
-}
-.file-list span {
-    color: #7f8c8d;
-    font-size: 0.85rem;
-    margin-left: 10px;
-}
-
-/* Comment Form & List */
-.comment-form textarea {
-    width: 100%;
-    padding: 10px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    margin-bottom: 10px;
-    min-height: 80px;
-    box-sizing: border-box;
-}
-.comment-form button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    float: right;
-}
-.comment-list {
-    margin-top: 20px;
-    clear: both;
-}
-.comment-item {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 5px;
-    margin-bottom: 10px;
-}
 .comment-author {
     font-weight: bold;
-    margin: 0 0 5px 0;
     color: #2c3e50;
+    margin-bottom: 4px;
 }
 .comment-author span {
     font-weight: normal;
     color: #95a5a6;
-    font-size: 0.8rem;
-    margin-left: 10px;
+    font-size: 0.75rem;
+    margin-left: 8px;
 }
 .comment-text {
-    margin: 0;
     color: #34495e;
+    line-height: 1.5;
 }
-.milestone-item, .file-item, .comment-item {
+
+/* === Forms (File Upload & Comments) === */
+.form-section {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.file-upload-form, .comment-form {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 15px;
+    gap: 10px;
 }
 
-.milestone-description {
-    font-size: 0.9rem;
-    color: #b0b0b0;
-    margin-top: 5px;
+.comment-form {
+    flex-direction: column;
 }
 
-.milestone-status-select {
-    background-color: #333;
-    color: #fff;
-    border: 1px solid #555;
+.file-upload-form input, .comment-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
     border-radius: 5px;
-    padding: 5px 10px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-position: right 10px center;
-    background-repeat: no-repeat;
-    padding-right: 30px;
+    box-sizing: border-box;
 }
 
-.delete-button-small {
-    background-color: #dc3545;
+.comment-form textarea {
+    min-height: 70px;
+    resize: vertical;
+}
+
+.upload-button, .comment-form button {
+    background-color: #007bff;
     color: white;
     border: none;
-    padding: 5px 10px;
-    font-size: 0.8rem;
-    border-radius: 4px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s;
-    flex-shrink: 0; /* Prevents the button from shrinking */
 }
 
-.delete-button-small:hover {
-    background-color: #c82333;
+.upload-button:hover, .comment-form button:hover {
+    background-color: #0056b3;
 }

@@ -9,17 +9,12 @@ const TaskCard = ({ task, onEdit }) => (
     <div className="task-card" onClick={() => onEdit(task)}>
       <h4 className="task-card-title">{task.title}</h4>
       <div className="task-card-meta">
-        <span className="project-title">
-          {task.projectId ? task.projectId.title : 'No Project'}
-        </span>
+        <span className="project-title">{task.projectId ? task.projectId.title : 'No Project'}</span>
         <div className="assignee-avatars">
-          {/* THE FIX: Check for task.assignedTo AND task.assignedTo.name before using charAt */}
           {task.assignedTo && task.assignedTo.name ? (
-            <span className="assignee-avatar" title={task.assignedTo.name}>
-              {task.assignedTo.name.charAt(0).toUpperCase()}
-            </span>
+            <span className="assignee-avatar" title={task.assignedTo.name}>{task.assignedTo.name.charAt(0).toUpperCase()}</span>
           ) : (
-            <span className="assignee-avatar" title="Unassigned">?</span>
+            <span className="assignee-avatar unassigned" title="Unassigned">?</span>
           )}
         </div>
       </div>
@@ -29,12 +24,10 @@ const TaskCard = ({ task, onEdit }) => (
 const TaskColumn = ({ title, tasks, onEdit }) => (
     <div className="task-column">
       <div className={`column-header ${title.replace(/\s+/g, '-').toLowerCase()}`}>
-        <h2 className="column-title">{title} ({tasks.length})</h2>
+        <h2 className="column-title">{title} <span className="task-count">({tasks.length})</span></h2>
       </div>
       <div className="task-list">
-        {tasks.map(task => (
-            <TaskCard key={task._id} task={task} onEdit={onEdit} />
-        ))}
+        {tasks.map(task => (<TaskCard key={task._id} task={task} onEdit={onEdit} />))}
       </div>
     </div>
 );
@@ -47,6 +40,7 @@ function Tasks() {
     const [error, setError] = useState('');
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
+    const [timeToLog, setTimeToLog] = useState(''); // State for the new time log input
     const token = localStorage.getItem('token');
 
     const fetchPageData = useCallback(async () => {
@@ -57,7 +51,7 @@ function Tasks() {
                 fetch(`${API_URL}/api/users`, { headers: { 'x-auth-token': token } }),
                 fetch(`${API_URL}/api/projects`, { headers: { 'x-auth-token': token } })
             ]);
-            if (!tasksRes.ok || !usersRes.ok || !projectsRes.ok) throw new Error('Failed to fetch data.');
+            if (!tasksRes.ok || !usersRes.ok || !projectsRes.ok) throw new Error('Failed to fetch page data. Please try logging in again.');
             
             const tasksData = await tasksRes.json();
             const usersData = await usersRes.json();
@@ -76,6 +70,7 @@ function Tasks() {
 
     const handleEditClick = (task) => {
         setEditingTask({ ...task, assignedTo: task.assignedTo?._id || '', projectId: task.projectId?._id || '' });
+        setTimeToLog(''); // Reset time log input when opening a new modal
         setShowEditModal(true);
     };
 
@@ -87,14 +82,38 @@ function Tasks() {
     const handleEditSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await fetch(`${API_URL}/api/tasks/${editingTask._id}`, {
+            // Step 1: Update the task details
+            const taskUpdateResponse = await fetch(`${API_URL}/api/tasks/${editingTask._id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
                 body: JSON.stringify(editingTask),
             });
-            if (!response.ok) throw new Error('Failed to update task.');
+            if (!taskUpdateResponse.ok) throw new Error('Failed to update task.');
+
+            // Step 2: If time was entered, log it
+            const hours = parseFloat(timeToLog);
+            if (hours > 0) {
+                if (!editingTask.projectId) {
+                    throw new Error('Task must be assigned to a project to log time.');
+                }
+                const timeEntryResponse = await fetch(`${API_URL}/api/timeentries`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+                    body: JSON.stringify({
+                        hours: hours,
+                        taskId: editingTask._id,
+                        projectId: editingTask.projectId,
+                        description: `Time logged for task: ${editingTask.title}`
+                    }),
+                });
+                if (!timeEntryResponse.ok) {
+                    const errorData = await timeEntryResponse.json();
+                    throw new Error(errorData.msg || 'Task updated, but failed to log time.');
+                }
+            }
+
             setShowEditModal(false);
-            fetchPageData(); // Refresh list
+            fetchPageData(); // Refresh the entire board
         } catch (err) {
             setError(err.message);
         }
@@ -108,6 +127,7 @@ function Tasks() {
             <div className="page-header">
                 <h1>Task Board</h1>
             </div>
+            {error && <p className="error-message">{error}</p>}
             <div className="tasks-board">
                 {columns.map(column => (
                     <TaskColumn
@@ -135,7 +155,7 @@ function Tasks() {
                                 <label>Description</label>
                                 <textarea name="description" value={editingTask.description || ''} onChange={handleInputChange}></textarea>
                             </div>
-                             <div className="form-group">
+                            <div className="form-group">
                                 <label>Project</label>
                                 <select name="projectId" value={editingTask.projectId} onChange={handleInputChange}>
                                     <option value="">No Project</option>
@@ -154,6 +174,14 @@ function Tasks() {
                                     <option value="">Unassigned</option>
                                     {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
                                 </select>
+                            </div>
+                            
+                            <div className="form-group time-log-group">
+                                <label>Log Time for this Task</label>
+                                <div className="time-log-input-wrapper">
+                                    <input type="number" step="0.1" min="0" value={timeToLog} onChange={(e) => setTimeToLog(e.target.value)} placeholder="e.g., 2.5" />
+                                    <span>hours</span>
+                                </div>
                             </div>
                             <div className="modal-actions">
                                 <button type="button" className="cancel-button" onClick={() => setShowEditModal(false)}>Cancel</button>

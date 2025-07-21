@@ -183,8 +183,16 @@ function ProjectDetail() {
                 <ul className="file-list">
                     {projectData?.files?.length > 0 ? projectData.files.map(file => (
                         <li key={file._id} className="file-item">
-                           <div><a href={`${API_URL}${file.path}`} target="_blank" rel="noopener noreferrer">{file.originalName}</a><span> ({(file.size / 1024).toFixed(2)} KB)</span></div>
-                           {currentUser?.role === 'CEO' && <button onClick={() => handleDeleteFile(file._id)} className="delete-button-small">Delete</button>}
+                            <div>
+                                {/* This link is correct. It creates the full URL to the file. */}
+                                <a href={`${API_URL}${file.path}`} target="_blank" rel="noopener noreferrer">
+                                    {file.originalName}
+                                </a>
+                                <span> ({(file.size / 1024).toFixed(2)} KB)</span>
+                            </div>
+                            {currentUser?.role === 'CEO' && (
+                                <button onClick={() => handleDeleteFile(file._id)} className="delete-button-small">Delete</button>
+                            )}
                         </li>
                     )) : <p>No files uploaded.</p>}
                 </ul>
