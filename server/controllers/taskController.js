@@ -17,6 +17,27 @@ exports.getTasks = async (req, res) => {
     }
 };
 
+// @desc    Get single task by ID
+exports.getTask = async (req, res) => {
+    try {
+        const task = await Task.findById(req.params.id)
+            .populate('projectId', 'title')
+            .populate('assignedTo', 'name');
+
+        if (!task) {
+            return res.status(404).json({ msg: 'Task not found' });
+        }
+        res.json(task);
+    } catch (err) {
+        console.error('Error fetching task:', err);
+        // Handle cases where the ID format is invalid
+        if (err.kind === 'ObjectId') {
+            return res.status(404).json({ msg: 'Task not found' });
+        }
+        res.status(500).send('Server Error');
+    }
+};
+
 // @desc    Create a task
 exports.createTask = async (req, res) => {
     try {
