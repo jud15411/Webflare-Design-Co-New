@@ -1,13 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/authMiddleware');
+// THE FIX: Destructure the import to get the specific middleware function
+const { authMiddleware } = require('../middleware/authMiddleware');
 const Task = require('../models/Task');
 const Project = require('../models/Project'); // Needed for some checks
 
 // @route   GET api/tasks
 // @desc    Get all tasks, populated with project and user info
 // @access  Private
-router.get('/', auth, async (req, res) => {
+// Use the correctly imported 'authMiddleware' function here
+router.get('/', authMiddleware, async (req, res) => {
     try {
         const tasks = await Task.find()
             .populate('projectId', 'title')
@@ -22,7 +24,7 @@ router.get('/', auth, async (req, res) => {
 // @route   POST api/tasks
 // @desc    Create a new task
 // @access  Private
-router.post('/', auth, async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
     const { title, description, status, projectId, assignedTo } = req.body;
     try {
         const newTask = new Task({
@@ -31,10 +33,10 @@ router.post('/', auth, async (req, res) => {
             status,
             projectId,
             assignedTo,
-            createdBy: req.user.id
+            // Assuming authMiddleware adds a userId to the request
+            createdBy: req.userId 
         });
         const task = await newTask.save();
-        // Return the populated task so the frontend can use the data
         const populatedTask = await Task.findById(task._id)
             .populate('projectId', 'title')
             .populate('assignedTo', 'name email');
@@ -48,7 +50,7 @@ router.post('/', auth, async (req, res) => {
 // @route   PUT api/tasks/:id
 // @desc    Update a task
 // @access  Private
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
     const { title, description, status, projectId, assignedTo } = req.body;
 
     const taskFields = {};
@@ -56,18 +58,11 @@ router.put('/:id', auth, async (req, res) => {
     if (description !== undefined) taskFields.description = description;
     if (status) taskFields.status = status;
     if (projectId) taskFields.projectId = projectId;
-    // Handle single or multiple assignees
     if (assignedTo) taskFields.assignedTo = Array.isArray(assignedTo) ? assignedTo : [assignedTo];
-
 
     try {
         let task = await Task.findById(req.params.id);
         if (!task) return res.status(404).json({ msg: 'Task not found' });
-
-        // Add authorization here if needed, for example:
-        // if (task.createdBy.toString() !== req.user.id) {
-        //     return res.status(401).json({ msg: 'User not authorized' });
-        // }
 
         task = await Task.findByIdAndUpdate(
             req.params.id,
@@ -85,15 +80,10 @@ router.put('/:id', auth, async (req, res) => {
 // @route   DELETE api/tasks/:id
 // @desc    Delete a task
 // @access  Private
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
     try {
         const task = await Task.findById(req.params.id);
         if (!task) return res.status(404).json({ msg: 'Task not found' });
-
-        // Add authorization here if needed (e.g., only CEO or Project Manager can delete)
-        // if (req.user.role !== 'CEO' && req.user.role !== 'Project Manager') {
-        //    return res.status(401).json({ msg: 'User not authorized to delete tasks' });
-        // }
 
         await Task.findByIdAndRemove(req.params.id);
 
