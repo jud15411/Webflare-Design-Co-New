@@ -1,95 +1,84 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
-import './App.css';
-
-// Import components
 import Sidebar from './components/Sidebar';
-import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
-import ProjectDetail from './pages/ProjectDetail'; // 1. Import ProjectDetail
-import Clients from './pages/Clients';
+import ProjectDetail from './pages/ProjectDetail';
 import Tasks from './pages/Tasks';
+import Users from './pages/Users';
+import Clients from './pages/Clients';
 import Invoices from './pages/Invoices';
 import Contracts from './pages/Contracts';
-import Settings from './pages/Settings';
-import Users from './pages/Users';
 import Services from './pages/Services';
 import Reports from './pages/Reports';
+import Settings from './pages/Settings';
+import Login from './pages/Login';
+import './App.css';
 
-// A new component for the main, authenticated layout
-const AppLayout = ({ user, onLogout }) => (
-  <div className="app-layout">
-    <Sidebar user={user} onLogout={onLogout} />
-    <main className="main-content">
-      {/* All protected routes are nested here */}
-      <Routes>
-        <Route path="/dashboard" element={<Dashboard />} />
-        
-        {/* 2. Add the specific route for a single project */}
-        <Route path="/projects/:projectId" element={<ProjectDetail />} />
-        
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/clients" element={<Clients />} />
-        <Route path="/invoices" element={<Invoices />} />
-        <Route path="/contracts" element={<Contracts />} />
-        <Route path="/services" element={<Services />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/users" element={<Users />} />
-        <Route path="/settings" element={<Settings />} />
-        {/* Redirect any other nested path to the dashboard */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </main>
-  </div>
-);
+// This component protects routes that require authentication
+const PrivateRoute = ({ isAuthenticated, children }) => {
+  return isAuthenticated ? children : <Navigate to="/login" />;
+};
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [isAuthLoaded, setIsAuthLoaded] = useState(false);
+  // State to track if the user is authenticated
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  // Check for token in localStorage on initial app load
   useEffect(() => {
-    try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        setUser(jwtDecode(token));
-      }
-    } catch (error) {
-      localStorage.removeItem('token');
-    } finally {
-      setIsAuthLoaded(true);
-    }
-  }, []);
-
-  const handleLoginSuccess = () => {
     const token = localStorage.getItem('token');
     if (token) {
-      setUser(jwtDecode(token));
+      setIsAuthenticated(true);
     }
+    setLoading(false);
+  }, []);
+
+  // Handler for successful login
+  const handleLogin = () => {
+    setIsAuthenticated(true);
   };
   
+  // Handler for logout
   const handleLogout = () => {
     localStorage.removeItem('token');
-    setUser(null);
+    setIsAuthenticated(false);
   };
 
-  if (!isAuthLoaded) {
+  // Don't render anything until we've checked for the token
+  if (loading) {
     return <div>Loading...</div>;
   }
 
   return (
     <Router>
-      <Routes>
-        {!user ? (
-          // --- Render Login page if not authenticated ---
-          <Route path="*" element={<Login onLoginSuccess={handleLoginSuccess} />} />
-        ) : (
-          // --- Render the main AppLayout for all paths if authenticated ---
-          <Route path="/*" element={<AppLayout user={user} onLogout={handleLogout} />} />
-        )}
-      </Routes>
+      <div className="App">
+        {/* Conditionally render the Sidebar */}
+        {isAuthenticated && <Sidebar handleLogout={handleLogout} />}
+        
+        <div className={isAuthenticated ? "main-content" : "main-content-full"}>
+          <Routes>
+            {/* Public Login Route */}
+            <Route path="/login" element={!isAuthenticated ? <Login onLoginSuccess={handleLogin} /> : <Navigate to="/dashboard" />} />
+
+            {/* Protected Routes */}
+            <Route path="/dashboard" element={<PrivateRoute isAuthenticated={isAuthenticated}><Dashboard /></PrivateRoute>} />
+            <Route path="/projects" element={<PrivateRoute isAuthenticated={isAuthenticated}><Projects /></PrivateRoute>} />
+            <Route path="/projects/:id" element={<PrivateRoute isAuthenticated={isAuthenticated}><ProjectDetail /></PrivateRoute>} />
+            <Route path="/tasks" element={<PrivateRoute isAuthenticated={isAuthenticated}><Tasks /></PrivateRoute>} />
+            <Route path="/users" element={<PrivateRoute isAuthenticated={isAuthenticated}><Users /></PrivateRoute>} />
+            <Route path="/clients" element={<PrivateRoute isAuthenticated={isAuthenticated}><Clients /></PrivateRoute>} />
+            <Route path="/invoices" element={<PrivateRoute isAuthenticated={isAuthenticated}><Invoices /></PrivateRoute>} />
+            <Route path="/contracts" element={<PrivateRoute isAuthenticated={isAuthenticated}><Contracts /></PrivateRoute>} />
+            <Route path="/services" element={<PrivateRoute isAuthenticated={isAuthenticated}><Services /></PrivateRoute>} />
+            <Route path="/reports" element={<PrivateRoute isAuthenticated={isAuthenticated}><Reports /></PrivateRoute>} />
+            <Route path="/settings" element={<PrivateRoute isAuthenticated={isAuthenticated}><Settings /></PrivateRoute>} />
+            
+            {/* Redirect root path */}
+            <Route path="/" element={<Navigate replace to={isAuthenticated ? "/dashboard" : "/login"} />} />
+          </Routes>
+        </div>
+      </div>
     </Router>
   );
 }

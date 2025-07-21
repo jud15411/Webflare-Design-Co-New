@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
 
-function Login() {
+// Accept onLoginSuccess as a prop
+function Login({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -11,7 +12,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
   
   const location = useLocation();
-  const navigate = useNavigate(); // Initialize useNavigate hook
+  const navigate = useNavigate();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -25,7 +26,6 @@ function Login() {
     } else if (status === 'failed') {
       setError(decodeURIComponent(msg || 'Email verification failed.'));
     }
-    // Clean the URL to avoid showing the message on refresh
     if (status) {
       window.history.replaceState({}, document.title, "/login");
     }
@@ -38,7 +38,13 @@ function Login() {
     try {
       const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/login`, { email, password });
       localStorage.setItem('token', res.data.token);
-      navigate('/dashboard'); // Use navigate for a smoother, client-side redirect
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+      
+      // Call the function to update the app's state
+      onLoginSuccess();
+
+      // Navigate to the dashboard
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.msg || 'An unexpected error occurred. Please try again.');
       console.error(err);
@@ -52,10 +58,6 @@ function Login() {
       <div className="login-box">
         <img src="/images/Webflare_Design_Co.webp" alt="Webflare Design Co. Logo" className="login-logo" />
         <h2>Developer Gateway</h2>
-        {/*
-          FIX: The form's onSubmit was pointing to 'handleLogin', but the function is named 'handleSubmit'.
-          This has been corrected below.
-        */}
         <form onSubmit={handleSubmit}>
           <div className="input-group">
             <label htmlFor="email">Email</label>
