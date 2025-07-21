@@ -28,17 +28,21 @@ const Sidebar = ({ handleLogout }) => {
                 <img src="/images/Webflare_Design_Co.webp" alt="Webflare Logo" className="sidebar-logo" />
                 <h3>Developer Gateway</h3>
             </div>
+            {/* THE FIX: Wrap the links in a <ul> */}
             <nav className="sidebar-nav">
-                <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'active' : ''}><FaTachometerAlt /> Dashboard</NavLink>
-                <NavLink to="/projects" className={({ isActive }) => isActive ? 'active' : ''}><FaProjectDiagram /> Projects</NavLink>
-                <NavLink to="/tasks" className={({ isActive }) => isActive ? 'active' : ''}><FaTasks /> Tasks</NavLink>
-                <NavLink to="/users" className={({ isActive }) => isActive ? 'active' : ''}><FaUsers /> Users</NavLink>
-                <NavLink to="/clients" className={({ isActive }) => isActive ? 'active' : ''}><FaUserTie /> Clients</NavLink>
-                <NavLink to="/invoices" className={({ isActive }) => isActive ? 'active' : ''}><FaFileInvoice /> Invoices</NavLink>
-                <NavLink to="/contracts" className={({ isActive }) => isActive ? 'active' : ''}><FaFileSignature /> Contracts</NavLink>
-                <NavLink to="/services" className={({ isActive }) => isActive ? 'active' : ''}><FaConciergeBell /> Services</NavLink>
-                <NavLink to="/reports" className={({ isActive }) => isActive ? 'active' : ''}><FaChartBar /> Reports</NavLink>
-                <NavLink to="/settings" className={({ isActive }) => isActive ? 'active' : ''}><FaCog /> Settings</NavLink>
+                <ul>
+                    {/* And wrap each NavLink in an <li> */}
+                    <li><NavLink to="/dashboard" className={({ isActive }) => isActive ? 'active' : ''}><FaTachometerAlt /> Dashboard</NavLink></li>
+                    <li><NavLink to="/projects" className={({ isActive }) => isActive ? 'active' : ''}><FaProjectDiagram /> Projects</NavLink></li>
+                    <li><NavLink to="/tasks" className={({ isActive }) => isActive ? 'active' : ''}><FaTasks /> Tasks</NavLink></li>
+                    <li><NavLink to="/users" className={({ isActive }) => isActive ? 'active' : ''}><FaUsers /> Users</NavLink></li>
+                    <li><NavLink to="/clients" className={({ isActive }) => isActive ? 'active' : ''}><FaUserTie /> Clients</NavLink></li>
+                    <li><NavLink to="/invoices" className={({ isActive }) => isActive ? 'active' : ''}><FaFileInvoice /> Invoices</NavLink></li>
+                    <li><NavLink to="/contracts" className={({ isActive }) => isActive ? 'active' : ''}><FaFileSignature /> Contracts</NavLink></li>
+                    <li><NavLink to="/services" className={({ isActive }) => isActive ? 'active' : ''}><FaConciergeBell /> Services</NavLink></li>
+                    <li><NavLink to="/reports" className={({ isActive }) => isActive ? 'active' : ''}><FaChartBar /> Reports</NavLink></li>
+                    <li><NavLink to="/settings" className={({ isActive }) => isActive ? 'active' : ''}><FaCog /> Settings</NavLink></li>
+                </ul>
             </nav>
             <div className="sidebar-footer">
                 {user && (
@@ -47,7 +51,6 @@ const Sidebar = ({ handleLogout }) => {
                         <span className="user-role">{user.role}</span>
                     </div>
                 )}
-                {/* The logout button now calls the onLogout function */}
                 <button onClick={onLogout} className="logout-button">
                     <FaSignOutAlt /> Logout
                 </button>
