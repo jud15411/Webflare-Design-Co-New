@@ -9,10 +9,15 @@ const TaskCard = ({ task, onEdit }) => (
     <div className="task-card" onClick={() => onEdit(task)}>
       <h4 className="task-card-title">{task.title}</h4>
       <div className="task-card-meta">
-        <span className="project-title">{task.projectId ? task.projectId.title : 'No Project'}</span>
+        <span className="project-title">
+          {task.projectId ? task.projectId.title : 'No Project'}
+        </span>
         <div className="assignee-avatars">
-          {task.assignedTo ? (
-            <span className="assignee-avatar" title={task.assignedTo.name}>{task.assignedTo.name.charAt(0).toUpperCase()}</span>
+          {/* THE FIX: Check for task.assignedTo AND task.assignedTo.name before using charAt */}
+          {task.assignedTo && task.assignedTo.name ? (
+            <span className="assignee-avatar" title={task.assignedTo.name}>
+              {task.assignedTo.name.charAt(0).toUpperCase()}
+            </span>
           ) : (
             <span className="assignee-avatar" title="Unassigned">?</span>
           )}
@@ -27,7 +32,9 @@ const TaskColumn = ({ title, tasks, onEdit }) => (
         <h2 className="column-title">{title} ({tasks.length})</h2>
       </div>
       <div className="task-list">
-        {tasks.map(task => (<TaskCard key={task._id} task={task} onEdit={onEdit} />))}
+        {tasks.map(task => (
+            <TaskCard key={task._id} task={task} onEdit={onEdit} />
+        ))}
       </div>
     </div>
 );
@@ -128,7 +135,7 @@ function Tasks() {
                                 <label>Description</label>
                                 <textarea name="description" value={editingTask.description || ''} onChange={handleInputChange}></textarea>
                             </div>
-                            <div className="form-group">
+                             <div className="form-group">
                                 <label>Project</label>
                                 <select name="projectId" value={editingTask.projectId} onChange={handleInputChange}>
                                     <option value="">No Project</option>
