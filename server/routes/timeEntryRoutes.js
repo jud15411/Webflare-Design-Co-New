@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/authMiddleware'); // Assuming you have auth middleware
-const { authMiddleware } = require('../middleware/authMiddleware');
+const { authMiddleware, adminOnlyMiddleware} = require('../middleware/authMiddleware');
 
 // Correctly import functions using object destructuring
 const {
