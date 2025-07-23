@@ -39,18 +39,10 @@
   border-bottom: 3px solid;
   text-align: center;
 }
-<<<<<<< HEAD
-
-.column-header.backlog { border-color: #6c757d; }
-.column-header.to-do { border-color: #007bff; }
-.column-header.in-progress { border-color: #ffc107; }
-.column-header.done { border-color: #28a745; }
-=======
 .column-header.backlog { border-color: #95a5a6; }
 .column-header.to-do { border-color: #3498db; }
 .column-header.in-progress { border-color: #f1c40f; }
 .column-header.done { border-color: #2ecc71; }
->>>>>>> parent of 0e2507e (big update)
 
 .column-title {
   margin: 0;
